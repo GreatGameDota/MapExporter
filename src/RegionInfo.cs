@@ -241,6 +241,7 @@ namespace MapExporterNew
             public IntVector2 size = new(0, 0);
             public int[,][] tiles;
             public IntVector2[] nodes;
+            public int[] denFlags;
 
             public DenSpawnData[][] spawns;
             public string[] tags;
@@ -329,11 +330,13 @@ namespace MapExporterNew
                     }
                 }
                 nodes = new IntVector2[aRoom.nodes.Length];
+                denFlags = new int[aRoom.nodes.Length];
                 for (int i = 0; i < nodes.Length; i++)
                 {
                     try
                     {
                         nodes[i] = room.LocalCoordinateOfNode(i).Tile;
+                        denFlags[i] = aRoom.nodes[i].type.Index;
                     }
                     catch (Exception e) // die
                     {
@@ -465,6 +468,7 @@ namespace MapExporterNew
                     { "size", size != null ? IntVectorToArray(size) : null },
                     { "tiles", tiles },
                     { "nodes", nodes?.Select(IntVectorToArray).ToList() },
+                    { "denFlags", denFlags },
 
                     { "spawns", spawns },
                     { "tags", tags },
@@ -504,6 +508,7 @@ namespace MapExporterNew
                     entry.cameras = ((List<object>)json["cameras"]).Cast<List<object>>().Select(Vector2FromList).ToArray();
                     entry.size = IntVectorFromList((List<object>)json["size"]);
                     entry.nodes = ((List<object>)json["nodes"]).Cast<List<object>>().Select(IntVectorFromList).ToArray();
+                    entry.denFlags = ((List<object>)json["denFlags"]).Select(x => (int)(long)x).ToArray();
 
                     var (w, h) = (entry.size.x, entry.size.y);
                     entry.tiles = new int[w, h][];

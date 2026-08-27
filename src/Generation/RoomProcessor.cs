@@ -13,6 +13,7 @@ namespace MapExporterNew.Generation
             var regionInfo = owner.regionInfo;
             List<RoomBoxInfo> roomBoxes = [];
             List<RoomTagInfo> roomTags = [];
+            List<RoomNodeInfo> roomNodes = [];
 
             int i = 0;
             foreach (var room in regionInfo.rooms.Values)
@@ -56,12 +57,40 @@ namespace MapExporterNew.Generation
                     });
                 }
 
+                if (room.nodes?.Length > 0 && room.denFlags?.Length > 0)
+                {
+                    int _i = 0;
+                    foreach (var node in room.nodes)
+                    {
+                        if (room.denFlags[_i] == 1)
+                        {
+                            roomNodes.Add(new RoomNodeInfo
+                            {
+                                room = room.roomName,
+                                name = room.roomName + "_node_" + _i,
+                                pos = room.devPos + (node.ToVector2() * 20f + new Vector2(10f, 10f))
+                            });
+                        }
+                        _i++;
+                    }
+                }
+                else if (room.cameras == null || room.cameras.Length == 0)
+                {
+                    roomNodes.Add(new RoomNodeInfo
+                    {
+                        room = room.roomName,
+                        name = room.roomName + "_node_" + 0,
+                        pos = room.devPos + offscreenSize + Vector2.left * (offscreenSize.x / 2f)
+                    });
+                }
+
                 i++;
                 // yield return (float)i / regionInfo.rooms.Count;
             }
 
             owner.metadata["room_features"] = roomBoxes;
             owner.metadata["roomtag_features"] = roomTags;
+            owner.metadata["room_nodes"] = roomNodes;
             yield return 1f;
             yield break;
         }
@@ -122,6 +151,37 @@ namespace MapExporterNew.Generation
                         {
                             { "room", name },
                             { "tags", tags }
+                        }
+                    }
+                };
+            }
+        }
+
+        private struct RoomNodeInfo : IJsonObject
+        {
+            public string room;
+            public string name;
+            public Vector2 pos;
+
+            public Dictionary<string, object> ToJson()
+            {
+                return new Dictionary<string, object>()
+                {
+                    { "type", "Feature" },
+                    {
+                        "geometry",
+                        new Dictionary<string, object>()
+                        {
+                            {"type", "Point" },
+                            { "coordinates", Vector2ToArray(pos) }
+                        }
+                    },
+                    {
+                        "properties",
+                        new Dictionary<string, object>()
+                        {
+                            { "room", room },
+                            { "name", name }
                         }
                     }
                 };

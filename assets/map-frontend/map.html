@@ -18,6 +18,7 @@
     <script src="./global.js"></script>
     <script src="./leaflet/leaflet.js"></script>
     <script src="./beziero.js"></script>
+    <script src="./jszip.min.js"></script>
 
     <style id="mapstyle">
         body,
@@ -414,6 +415,25 @@
 <body>
     <div id="mapid"></div>
 
+    <button id="exportBtn" style="position: absolute;bottom: 24px;left: 500px;z-index: 1000;">Export</button>
+
+    <div class="rw-text" id="modalOverlay">
+        <div>
+            <button id="modalClose">&times;</button>
+            <h2 id="modalTitle"></h2>
+
+            <div id="spawnCards"></div>
+            <button id="addSpawnBtn">+ Add spawn</button>
+
+            <div>
+                <div>
+                    <button id="cancelBtn">Cancel</button>
+                    <button id="saveBtn">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="side-panel left-panel rw-text collapsible collapsed">
         <div style="padding-left: 8px; padding-bottom: 8px;">
             <a href="./" class="rw-text">&lt; Back to Index</a>
@@ -536,6 +556,8 @@
 
         // Setup or something like that
         var regions = {};
+        var regionJson = {};
+        var originalRegionJson = {};
         var slugcats = [];
         var poRules = {};
 
@@ -678,6 +700,22 @@
             pushState();
         }
 
+        function openModal(e) {
+            _openModal(e.target.feature);
+        }
+
+        function nodeToSpawn(node, pdifficulty) {
+            var parts = node.properties.name.split("_");
+            return regionJson[`${pdifficulty}-${region}`]["spawn_features"].find(spawn => parts[0] + "_" + parts[1] == spawn.properties.room && spawn.properties.den == parseInt(parts[3]));
+        }
+
+        function spawnToNode(spawn, pdifficulty) {
+            return regionJson[`${pdifficulty}-${region}`]["room_nodes"].find(node => {
+                var parts = node.properties.name.split("_");
+                return parts[0] + "_" + parts[1] == spawn.properties.room && parseInt(parts[3]) == spawn.properties.den;
+            });
+        }
+
         function updateFocus() {
             if (focusedRoom == null) return;
             if (!map.getBounds().overlaps(focusedRoom.getBounds())) {
@@ -736,7 +774,464 @@
         overlays.addTo(map);
         document.getElementById('layer-content').appendChild(overlays.getContainer());
 
+        // MODAL
+        const overlay = document.getElementById('modalOverlay');
+        const modalTitle = document.getElementById('modalTitle');
+        const propRows = document.getElementById('propRows');
+        const spawnCards = document.getElementById('spawnCards');
+        const addSpawnBtn = document.getElementById('addSpawnBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const modalClose = document.getElementById('modalClose');
+
+        let currentNode = null;
+
+        function addSpawnCard(spawn = {}) {
+            const card = document.createElement('div');
+            card.className = 'spawn-card';
+
+            const isLineage = spawn.is_lineage ?? false;
+            const lineage = spawn.lineage || [];
+            const lineageProbs = spawn.lineage_probs || [];
+            const lineageData = spawn.lineage_data || [];
+
+            card.innerHTML = `
+                <div>
+                    <strong>Spawn</strong>
+                    <button type="button" class="remove-spawn" title="Remove spawn">&times;</button>
+                </div>
+                <div>
+                    <div>
+                        <label>Creature</label>
+                        <input type="text" class="f-creature" value="${spawn.creature ?? ''}" placeholder="Snail" />
+                    </div>
+                    <div>
+                        <label>Amount</label>
+                        <input type="number" class="f-amount" value="${spawn.amount ?? 1}" min="0" />
+                    </div>
+                    <div>
+                        <label>Spawn data</label>
+                        <input type="text" class="f-spawn-data" value="${spawn.spawn_data ?? ''}" placeholder="{PreCycle}" />
+                    </div>
+                    <label>
+                        <input type="checkbox" class="f-is-lineage" ${isLineage ? 'checked' : ''} />
+                        Is lineage
+                    </label>
+                </div>
+                <div class="lineage-box" style="display: ${isLineage ? 'block' : 'none'}">
+                    <div class="lineage-rows"></div>
+                    <button type="button" class="add-lineage-row">+ Add lineage step</button>
+                </div>
+            `;
+
+            const lineageBox = card.querySelector('.lineage-box');
+            const lineageRows = card.querySelector('.lineage-rows');
+            const isLineageCheckbox = card.querySelector('.f-is-lineage');
+
+            function addLineageRow(creature = '', prob = '0.0000', dataVal = null) {
+                const row = document.createElement('div');
+                row.className = 'lineage-row';
+                row.innerHTML = `
+                    <input type="text" class="l-creature" value="${creature}" placeholder="creature" />
+                    <input type="text" class="l-prob" value="${prob}" placeholder="0.0000" />
+                    <input type="text" class="l-data" value="${dataVal ?? ''}" placeholder="null" />
+                    <button type="button" class="remove-lineage-row" title="Remove">&times;</button>
+                `;
+                row.querySelector('.remove-lineage-row').addEventListener('click', () => row.remove());
+                lineageRows.appendChild(row);
+            }
+
+            if (lineage.length === 0 && isLineage) {
+                addLineageRow();
+            } else {
+                lineage.forEach((creature, i) => {
+                    addLineageRow(creature, lineageProbs[i] ?? '0.0000', lineageData[i] ?? null);
+                });
+            }
+
+            isLineageCheckbox.addEventListener('change', () => {
+                lineageBox.style.display = isLineageCheckbox.checked ? 'block' : 'none';
+                if (isLineageCheckbox.checked && lineageRows.children.length === 0) addLineageRow();
+            });
+
+            card.querySelector('.add-lineage-row').addEventListener('click', () => addLineageRow());
+            card.querySelector('.remove-spawn').addEventListener('click', () => card.remove());
+
+            spawnCards.appendChild(card);
+        }
+
+        function _openModal(data) {
+            modalTitle.textContent = data.properties.name;
+
+            spawnCards.innerHTML = '';
+            currentNode = data;
+            nodeToSpawn(data, loadedDifficulty)?.properties.spawns.forEach(spawn => addSpawnCard(spawn));
+
+            overlay.classList.add('open');
+        }
+
+        function closeModal() {
+            overlay.classList.remove('open');
+            currentNode = null;
+        }
+
+        addSpawnBtn.addEventListener('click', addSpawnCard);
+        cancelBtn.addEventListener('click', closeModal);
+        modalClose.addEventListener('click', closeModal);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+
+        saveBtn.addEventListener('click', () => {
+            const spawns = [];
+            spawnCards.querySelectorAll('.spawn-card').forEach((card) => {
+                const isLineage = card.querySelector('.f-is-lineage').checked;
+                const amountRaw = card.querySelector('.f-amount').value;
+                const spawnDataRaw = card.querySelector('.f-spawn-data').value.trim();
+
+                const spawn = {
+                    is_lineage: isLineage,
+                    amount: amountRaw === '' ? 0 : Number(amountRaw),
+                    creature: card.querySelector('.f-creature').value.trim(),
+                    spawn_data: spawnDataRaw === '' ? null : spawnDataRaw
+                };
+
+                if (isLineage) {
+                    const lineage = [];
+                    const lineageProbs = [];
+                    const lineageData = [];
+                    card.querySelectorAll('.lineage-row').forEach((row) => {
+                        lineage.push(row.querySelector('.l-creature').value.trim());
+                        lineageProbs.push(row.querySelector('.l-prob').value.trim());
+                        const dataVal = row.querySelector('.l-data').value.trim();
+                        lineageData.push(dataVal === '' ? null : dataVal);
+                    });
+                    spawn.lineage = lineage;
+                    spawn.lineage_probs = lineageProbs;
+                    spawn.lineage_data = lineageData;
+                }
+
+                spawns.push(spawn);
+            });
+
+            var _spawns = nodeToSpawn(currentNode, loadedDifficulty);
+            if (_spawns) {
+                _spawns.properties.spawns = spawns;
+            }
+            else {
+                const newSpawnFeature = {
+                    type: "Feature",
+                    properties: {
+                        room: currentNode.properties.name.split("_").slice(0, 2).join("_"),
+                        den: parseInt(currentNode.properties.name.split("_")[3]),
+                        spawns: spawns
+                    },
+                    geometry: {
+                        type: "Point",
+                        coordinates: [currentNode.geometry.coordinates[0], currentNode.geometry.coordinates[1]]
+                    }
+                };
+                regionJson[`${loadedDifficulty}-${region}`]["spawn_features"].push(newSpawnFeature);
+            }
+            overlay.classList.remove('open');
+            currentNode = null;
+
+            drawSpawns(loadedDifficulty);
+        });
+
+        function spawnFeaturesToWorldTxt(spawnFeatures, originalSpawnFeatures) {
+            let lines = [];
+            var origSpawnsMap = {};
+            lines.push("[MERGE]");
+            lines.push("CREATURES");
+            for (const feature of originalSpawnFeatures) {
+                var room = feature.properties.room;
+                if (room.toLowerCase().includes("offscreen"))
+                    room = "OFFSCREEN";
+                if (origSpawnsMap[room] == null)
+                    origSpawnsMap[room] = [];
+                const den = feature.properties.den;
+                for (const spawn of feature.properties.spawns) {
+                    var creature = spawn.creature;
+                    const amount = spawn.amount;
+                    const spawnData = spawn.spawn_data ?? '';
+                    var spawnStr = `(${loadedDifficulty.charAt(0).toUpperCase() + loadedDifficulty.slice(1)})`;
+                    if (spawn.is_lineage) {
+                        spawnStr += "LINEAGE : ";
+                        spawnStr += `${room} : ${den} : `;
+                        // const lineageStr = spawn.lineage.map((creature, i) => {
+                        //     const prob = parseFloat(spawn.lineage_probs[i]).toString();
+                        //     if (creature === "")
+                        //         creature = "NONE";
+                        //     var linStr = `${creature}-`;
+                        //     if (spawn.lineage_data[i]) linStr += `${spawn.lineage_data[i]}-`;
+                        //     linStr += `${prob}`;
+                        //     return linStr;
+                        // }).join(', ');
+                        // spawnStr += lineageStr;
+                        spawnStr += "NONE-0";
+                        lines.push(spawnStr);
+                    } else {
+                        spawnStr += `${room} : ${den}-NONE`;
+                        // spawnStr += `${room} : ${den}-${creature}`;
+                        // if (spawnData) spawnStr += `-${spawnData}`;
+                        // if (amount > 1) spawnStr += `-${amount}`;
+                        if (!origSpawnsMap[room].includes(spawnStr))
+                            origSpawnsMap[room].push(spawnStr);
+                    }
+                    // lines.push("[FINDLINEREGEX].*" + spawnStr + ".*");
+                    // lines.push("[REPLACE]");
+                }
+            }
+
+            for (const [key, value] of Object.entries(origSpawnsMap)) {
+                if (value.length > 0)
+                {
+                    var str = value[0];
+                    for (var i = 1; i < value.length; i++)
+                    {
+                        str += ", " + value[i].split(" : ")[1];
+                    }
+                    lines.push(str);
+                }
+            }
+
+            var spawnsMap = {};
+            // lines.push("[MERGE]");
+            // lines.push("CREATURES");
+            for (const feature of spawnFeatures) {
+                var room = feature.properties.room;
+                if (room.toLowerCase().includes("offscreen"))
+                    room = "OFFSCREEN";
+                if (spawnsMap[room] == null)
+                    spawnsMap[room] = [];
+                const den = feature.properties.den;
+                for (const spawn of feature.properties.spawns) {
+                    var creature = spawn.creature;
+                    const amount = spawn.amount;
+                    const spawnData = spawn.spawn_data ?? '';
+                    var spawnStr = `(${loadedDifficulty.charAt(0).toUpperCase() + loadedDifficulty.slice(1)})`;
+                    if (spawn.is_lineage) {
+                        spawnStr += "LINEAGE : ";
+                        spawnStr += `${room} : ${den} : `;
+                        const lineageStr = spawn.lineage.map((creature, i) => {
+                            const prob = parseFloat(spawn.lineage_probs[i]).toString();
+                            if (creature === "")
+                                creature = "NONE";
+                            var linStr = `${creature}-`;
+                            if (spawn.lineage_data[i]) linStr += `${spawn.lineage_data[i]}-`;
+                            linStr += `${prob}`;
+                            return linStr;
+                        }).join(', ');
+                        spawnStr += lineageStr;
+                        lines.push(spawnStr);
+                    } else {
+                        spawnStr += `${room} : ${den}-${creature}`;
+                        if (spawnData) spawnStr += `-${spawnData}`;
+                        if (amount > 1) spawnStr += `-${amount}`;
+                        spawnsMap[room].push(spawnStr);
+                    }
+                }
+            }
+
+            for (const [key, value] of Object.entries(spawnsMap)) {
+                if (value.length > 0)
+                {
+                    var str = value[0];
+                    for (var i = 1; i < value.length; i++)
+                    {
+                        str += ", " + value[i].split(" : ")[1];
+                    }
+                    lines.push(str);
+                }
+            }
+
+            lines.push("END CREATURES");
+            lines.push("[ENDMERGE]");
+            return lines.join('\n');
+        }
+
+        const exportBtn = document.getElementById('exportBtn');
+        exportBtn.addEventListener('click', async () => {
+            exportBtn.disabled = true;
+
+            try {
+                const zip = new JSZip();
+                const modifyFolder = zip.folder('modify');
+                const worldFolder = modifyFolder.folder('world');
+                const regionFolder = worldFolder.folder(region.toLowerCase());
+                regionFolder.file(`world_${region.toLowerCase()}.txt`, spawnFeaturesToWorldTxt(regionJson[`${loadedDifficulty}-${region}`]["spawn_features"], originalRegionJson[`${loadedDifficulty}-${region}`]["spawn_features"]));
+
+                const blob = await zip.generateAsync({ type: 'blob' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `map_export_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.zip`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+            } catch (err) {
+                console.error('Export failed:', err);
+                alert('Export failed');
+            } finally {
+                exportBtn.disabled = false;
+            }
+        });
+
         // Region stuff
+        function drawSpawns(pdifficulty) {
+            let hadSpawns = map.hasLayer(densLayer) || loadedRegion == null;
+            if (densLayer != null) {
+                overlays.removeLayer(densLayer);
+                map.removeLayer(densLayer);
+            }
+            densLayer = L.geoJSON(regionJson[`${pdifficulty}-${region}`]["spawn_features"], {
+                pointToLayer: function (feature, latlng) {
+                    // Spawns are organized by dens, dens list spawns in it, flexbox stacks them visually on the den location, filter classes control visib
+                    let divhtml = "";
+                    for (let spawn of feature.properties.spawns) {
+                        let spawn_filter = " spawn-filter";
+                        if (spawn.is_lineage) {
+                            // lineages are vertical stacks
+                            divhtml += '<div class="spawn-entry ' + spawn_filter + '">';
+                            for (let i = 0; i < spawn.lineage.length; i++) {
+                                let tooltip = "";
+                                let rottype = 0;
+                                if (spawn.lineage_data != null && spawn.lineage_data[i] != null && spawn.lineage_data[i].length > 2) {
+                                    let spawndata = spawn.lineage_data[i].substring(1, spawn.lineage_data[i].length - 1).split("|").map(x => x.trim()).filter(x => isNaN(x));
+
+                                    if (spawndata.indexOf("Night") > -1) {
+                                        tooltip += "🌙";
+                                        spawndata.splice(spawndata.indexOf("Night"), 1);
+                                    }
+                                    if (spawndata.indexOf("PreCycle") > -1) {
+                                        tooltip += "🚿";
+                                        spawndata.splice(spawndata.indexOf("PreCycle"), 1);
+                                    }
+                                    if (spawndata.indexOf("Winter") > -1) {
+                                        tooltip += "❄️";
+                                        spawndata.splice(spawndata.indexOf("Winter"), 1);
+                                    }
+                                    if (spawndata.findIndex(x => x.startsWith("RotType")) > -1) {
+                                        let rotflag = spawndata.find(x => x.startsWith("RotType"));
+                                        switch (rotflag) {
+                                            case "RotType:1":
+                                            case "RotType:2":
+                                                rottype = 1;
+                                                break;
+                                            case "RotType:3":
+                                                rottype = 2;
+                                                break;
+                                        }
+                                        // spawndata.splice(spawndata.findIndex(x => x.startsWith("RotType")), 1);
+                                    }
+                                    if (spawndata.findIndex(x => x.startsWith("NamedAttr")) > -1) {
+                                        spawndata.splice(spawndata.findIndex(x => x.startsWith("NamedAttr")));
+                                    }
+                                    if (tooltip.length > 0) tooltip += ", ";
+                                    tooltip += spawndata.join(", ");
+                                }
+
+                                let icon = spawn.lineage[i].toLowerCase();
+                                if (rottype > 0) icon = icon + "_" + rottype;
+                                let path = "./resources/icons/" + icon + ".png";
+                                if (spawn.lineage[i] == "") path = "./resources/none.png";
+                                divhtml += `<div class="lineage-entry${rottype > 0 ? " tall" : ""}">
+                                    <img class="icon-image" src="${path}"/>
+                                    <div class="icon-label">${Math.trunc(Number.parseFloat(spawn.lineage_probs[i]) * 100)}%</div>
+                                    <div class="icon-tooltip">${tooltip}</div>
+                                    </div>`;
+                            }
+                            divhtml += '</div>';
+                        } else {
+                            let tooltip = "";
+                            let rottype = 0;
+                            let altform = false;
+                            if (spawn.spawn_data != null && spawn.spawn_data.length > 2) {
+                                let spawndata = spawn.spawn_data.substring(1, spawn.spawn_data.length - 1).split("|").map(x => x.trim()).filter(x => isNaN(x));
+
+                                if (spawndata.indexOf("Night") > -1) {
+                                    tooltip += "🌙";
+                                    spawndata.splice(spawndata.indexOf("Night"), 1);
+                                }
+                                if (spawndata.indexOf("PreCycle") > -1) {
+                                    tooltip += "🚿";
+                                    spawndata.splice(spawndata.indexOf("PreCycle"), 1);
+                                }
+                                if (spawndata.indexOf("Winter") > -1) {
+                                    tooltip += "❄️";
+                                    spawndata.splice(spawndata.indexOf("Winter"), 1);
+                                }
+                                if (spawndata.findIndex(x => x.startsWith("RotType")) > -1) {
+                                    let rotflag = spawndata.find(x => x.startsWith("RotType"));
+                                    switch (rotflag) {
+                                        case "RotType:1":
+                                        case "RotType:2":
+                                            rottype = 1;
+                                            break;
+                                        case "RotType:3":
+                                            rottype = 2;
+                                            break;
+                                    }
+                                    // spawndata.splice(spawndata.findIndex(x => x.startsWith("RotType")), 1);
+                                }
+                                if (spawndata.findIndex(x => x.startsWith("NamedAttr")) > -1) {
+                                    spawndata.splice(spawndata.findIndex(x => x.startsWith("NamedAttr")), 1);
+                                }
+                                if (spawndata.indexOf("AlternateForm") > -1) {
+                                    altform = true;
+                                    spawndata.splice(spawndata.indexOf("AlternateForm"), 1);
+                                }
+                                if (tooltip.length > 0) tooltip += ", ";
+                                tooltip += spawndata.join(", ");
+                            }
+                            let icon = spawn.creature.toLowerCase();
+                            if (altform && icon == "skywhale") icon = "altskywhale";
+                            if (rottype > 0) icon = icon + "_" + rottype;
+                            let path = "./resources/icons/" + icon + ".png";
+                            divhtml += `<div class="spawn-entry${spawn_filter}">
+                                <img class="icon-image" src="${path}"/>
+                                <div class="icon-label">x${spawn.amount}</div>
+                                <div class="icon-tooltip">${tooltip}</div>
+                                </div>`;
+                        }
+                    }
+                    return L.marker(latlng, {
+                        icon: L.divIcon({
+                            className: 'spawn-divs',
+                            html: divhtml,
+                        }),
+                        interactive: false,
+                    });
+                },
+            });
+            if (hadSpawns) densLayer.addTo(map);
+            overlays.addOverlay(densLayer, "Spawns");
+
+            let hadCreatureDens = map.hasLayer(creatureDenLayer) || loadedRegion == null;
+            if (creatureDenLayer != null) {
+                overlays.removeLayer(creatureDenLayer);
+                map.removeLayer(creatureDenLayer);
+            }
+            creatureDenLayer = L.geoJSON(regionJson[`${pdifficulty}-${region}`]["room_nodes"], {
+                pointToLayer: function (feature, latlng) {
+                    return L.marker(latlng, {
+                        icon: L.divIcon({
+                            className: "creature-den-divs",
+                            html: nodeToSpawn(feature, pdifficulty) != null && nodeToSpawn(feature, pdifficulty).properties.spawns.length > 0 ? `<div class="creature-den-entry" style="width: 62px;height: 62px;outline: 1px dashed red;margin: auto"></div>` : '<img class="object-image" src="./resources/none.png" style="width: 62px;height: 62px;outline: 1px dashed red;margin: auto"/>',
+                            iconSize: [62, 62],
+                        })
+                    });
+                },
+                onEachFeature: function (feature, layer) {
+                    layer.on({
+                        click: openModal,
+                    });
+                }
+            });
+            if (hadCreatureDens) creatureDenLayer.addTo(map);
+            overlays.addOverlay(creatureDenLayer, "Creature Dens");
+        }
+
         var tileLayer;
         var roomsLayer;
         var roomNames;
@@ -750,6 +1245,7 @@
         var warpDestsLayer;
         var rippleEggsLayer;
         var vistaPointsLayer;
+        var creatureDenLayer;
         var loadedDifficulty = null;
         var loadedRegion = null;
         var rottedRegions = ["wora", "wsur", "whir", "wgwr", "wdsr"];
@@ -789,6 +1285,8 @@
             var region_url = region.toUpperCase();
             var roompath = `./slugcats/${region_url}/${pdifficulty}`;
             getJsonObject(`${roompath}/region.json`, function (json) {
+                regionJson[`${pdifficulty}-${region}`] = JSON.parse(JSON.stringify(json));
+                originalRegionJson[`${pdifficulty}-${region}`] = JSON.parse(JSON.stringify(json));
                 var roomjson = json;
                 if ('copyingrooms' in json) {
                     getJsonObject(`${roompath}/${region_url}/region.json`, function (copyjson) {
@@ -833,7 +1331,7 @@
                         layer.on({
                             mouseover: hilightRoom,
                             mouseout: resetHilight,
-                            click: focusRoom,
+                            // click: focusRoom,
                             tooltipopen: function (e) {
                                 e.tooltip.setLatLng(L.latLng([].concat(e.target.feature.properties.popupcoords).reverse()));
                                 e.tooltip.getElement().style.removeProperty('opacity'); // 'defaults' amirite
@@ -883,133 +1381,7 @@
                 overlays.addOverlay(geometryLayer, "Geometry");
 
                 // Spawns
-                let hadSpawns = map.hasLayer(densLayer) || loadedRegion == null;
-                if (densLayer != null) {
-                    overlays.removeLayer(densLayer);
-                    map.removeLayer(densLayer);
-                }
-                densLayer = L.geoJSON(json["spawn_features"], {
-                    pointToLayer: function (feature, latlng) {
-                        // Spawns are organized by dens, dens list spawns in it, flexbox stacks them visually on the den location, filter classes control visib
-                        let divhtml = "";
-                        for (let spawn of feature.properties.spawns) {
-                            let spawn_filter = " spawn-filter";
-                            if (spawn.is_lineage) {
-                                // lineages are vertical stacks
-                                divhtml += '<div class="spawn-entry ' + spawn_filter + '">';
-                                for (let i = 0; i < spawn.lineage.length; i++) {
-                                    let tooltip = "";
-                                    let rottype = 0;
-                                    if (spawn.lineage_data != null && spawn.lineage_data[i] != null && spawn.lineage_data[i].length > 2) {
-                                        let spawndata = spawn.lineage_data[i].substring(1, spawn.lineage_data[i].length - 1).split("|").map(x => x.trim()).filter(x => isNaN(x));
-
-                                        if (spawndata.indexOf("Night") > -1) {
-                                            tooltip += "🌙";
-                                            spawndata.splice(spawndata.indexOf("Night"), 1);
-                                        }
-                                        if (spawndata.indexOf("PreCycle") > -1) {
-                                            tooltip += "🚿";
-                                            spawndata.splice(spawndata.indexOf("PreCycle"), 1);
-                                        }
-                                        if (spawndata.indexOf("Winter") > -1) {
-                                            tooltip += "❄️";
-                                            spawndata.splice(spawndata.indexOf("Winter"), 1);
-                                        }
-                                        if (spawndata.findIndex(x => x.startsWith("RotType")) > -1) {
-                                            let rotflag = spawndata.find(x => x.startsWith("RotType"));
-                                            switch (rotflag) {
-                                                case "RotType:1":
-                                                case "RotType:2":
-                                                    rottype = 1;
-                                                    break;
-                                                case "RotType:3":
-                                                    rottype = 2;
-                                                    break;
-                                            }
-                                            // spawndata.splice(spawndata.findIndex(x => x.startsWith("RotType")), 1);
-                                        }
-                                        if (spawndata.findIndex(x => x.startsWith("NamedAttr")) > -1) {
-                                            spawndata.splice(spawndata.findIndex(x => x.startsWith("NamedAttr")));
-                                        }
-                                        if (tooltip.length > 0) tooltip += ", ";
-                                        tooltip += spawndata.join(", ");
-                                    }
-
-                                    let icon = spawn.lineage[i].toLowerCase();
-                                    if (rottype > 0) icon = icon + "_" + rottype;
-                                    let path = "./resources/icons/" + icon + ".png";
-                                    if (spawn.lineage[i] == "") path = "./resources/none.png";
-                                    divhtml += `<div class="lineage-entry${rottype > 0 ? " tall" : ""}">
-                                        <img class="icon-image" src="${path}"/>
-                                        <div class="icon-label">${Math.trunc(Number.parseFloat(spawn.lineage_probs[i]) * 100)}%</div>
-                                        <div class="icon-tooltip">${tooltip}</div>
-                                        </div>`;
-                                }
-                                divhtml += '</div>';
-                            } else {
-                                let tooltip = "";
-                                let rottype = 0;
-                                let altform = false;
-                                if (spawn.spawn_data != null && spawn.spawn_data.length > 2) {
-                                    let spawndata = spawn.spawn_data.substring(1, spawn.spawn_data.length - 1).split("|").map(x => x.trim()).filter(x => isNaN(x));
-
-                                    if (spawndata.indexOf("Night") > -1) {
-                                        tooltip += "🌙";
-                                        spawndata.splice(spawndata.indexOf("Night"), 1);
-                                    }
-                                    if (spawndata.indexOf("PreCycle") > -1) {
-                                        tooltip += "🚿";
-                                        spawndata.splice(spawndata.indexOf("PreCycle"), 1);
-                                    }
-                                    if (spawndata.indexOf("Winter") > -1) {
-                                        tooltip += "❄️";
-                                        spawndata.splice(spawndata.indexOf("Winter"), 1);
-                                    }
-                                    if (spawndata.findIndex(x => x.startsWith("RotType")) > -1) {
-                                        let rotflag = spawndata.find(x => x.startsWith("RotType"));
-                                        switch (rotflag) {
-                                            case "RotType:1":
-                                            case "RotType:2":
-                                                rottype = 1;
-                                                break;
-                                            case "RotType:3":
-                                                rottype = 2;
-                                                break;
-                                        }
-                                        // spawndata.splice(spawndata.findIndex(x => x.startsWith("RotType")), 1);
-                                    }
-                                    if (spawndata.findIndex(x => x.startsWith("NamedAttr")) > -1) {
-                                        spawndata.splice(spawndata.findIndex(x => x.startsWith("NamedAttr")), 1);
-                                    }
-                                    if (spawndata.indexOf("AlternateForm") > -1) {
-                                        altform = true;
-                                        spawndata.splice(spawndata.indexOf("AlternateForm"), 1);
-                                    }
-                                    if (tooltip.length > 0) tooltip += ", ";
-                                    tooltip += spawndata.join(", ");
-                                }
-                                let icon = spawn.creature.toLowerCase();
-                                if (altform && icon == "skywhale") icon = "altskywhale";
-                                if (rottype > 0) icon = icon + "_" + rottype;
-                                let path = "./resources/icons/" + icon + ".png";
-                                divhtml += `<div class="spawn-entry${spawn_filter}">
-                                    <img class="icon-image" src="${path}"/>
-                                    <div class="icon-label">x${spawn.amount}</div>
-                                    <div class="icon-tooltip">${tooltip}</div>
-                                    </div>`;
-                            }
-                        }
-                        return L.marker(latlng, {
-                            icon: L.divIcon({
-                                className: 'spawn-divs',
-                                html: divhtml,
-                            }),
-                            interactive: false,
-                        });
-                    },
-                });
-                if (hadSpawns) densLayer.addTo(map);
-                overlays.addOverlay(densLayer, "Spawns");
+                drawSpawns(pdifficulty);
 
                 // Placed Objects
                 let hadPlacedObjects = map.hasLayer(placedObjectsLayer) || loadedRegion == null;
