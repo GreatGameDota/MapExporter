@@ -62,7 +62,7 @@ namespace MapExporterNew.Generation
                     int _i = 0;
                     foreach (var node in room.nodes)
                     {
-                        if (room.denFlags[_i] == 1)
+                        if (room.denFlags[_i] == 1 || room.denFlags[_i] == 7)
                         {
                             roomNodes.Add(new RoomNodeInfo
                             {

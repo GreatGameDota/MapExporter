@@ -452,7 +452,9 @@
 <body>
     <div id="mapid"></div>
 
-    <button class="export-btn" id="exportBtn" style="position: absolute;bottom: 24px;left: 500px;z-index: 1000;">Export</button>
+    <button id="exportBtn" style="position: absolute;bottom: 24px;left: 500px;z-index: 1000;">Export</button>
+    <button id="uploadBtn" style="position: absolute;bottom: 24px;left: 600px;z-index: 1000;">Import .txt</button>
+    <input type="file" id="fileInput" accept=".txt" single style="display:none" />
 
     <div class="modal-overlay rw-text" id="modalOverlay">
         <div class="modal-box">
@@ -741,13 +743,13 @@
 
         function nodeToSpawn(node, pdifficulty) {
             var parts = node.properties.name.split("_");
-            return regionJson[`${pdifficulty}-${region}`]["spawn_features"].find(spawn => parts[0] + "_" + parts[1] == spawn.properties.room && spawn.properties.den == parseInt(parts[3]));
+            return regionJson[`${pdifficulty}-${region}`]["spawn_features"].find(spawn => node.properties.room.toLowerCase() == spawn.properties.room.toLowerCase() && spawn.properties.den == parseInt(parts[3]));
         }
 
         function spawnToNode(spawn, pdifficulty) {
             return regionJson[`${pdifficulty}-${region}`]["room_nodes"].find(node => {
                 var parts = node.properties.name.split("_");
-                return parts[0] + "_" + parts[1] == spawn.properties.room && parseInt(parts[3]) == spawn.properties.den;
+                return node.properties.room.toLowerCase() == spawn.properties.room.toLowerCase() && parseInt(parts[3]) == spawn.properties.den;
             });
         }
 
@@ -955,7 +957,7 @@
                 const newSpawnFeature = {
                     type: "Feature",
                     properties: {
-                        room: currentNode.properties.name.split("_").slice(0, 2).join("_"),
+                        room: currentNode.properties.room,
                         den: parseInt(currentNode.properties.name.split("_")[3]),
                         spawns: spawns
                     },
@@ -1111,6 +1113,189 @@
                 exportBtn.disabled = false;
             }
         });
+
+        const uploadBtn = document.getElementById('uploadBtn');
+        const fileInput = document.getElementById('fileInput');
+
+        uploadBtn.addEventListener('click', () => fileInput.click());
+
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(reader.error);
+                reader.readAsText(file);
+            });
+        }
+
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            uploadBtn.disabled = true;
+            const text = await readFileAsText(file);
+
+            const world = file.name.split(".txt")[0].split("_")[1];
+            if (world.toLowerCase() == region.toLowerCase())
+            {
+                regionJson[`${loadedDifficulty}-${region}`]["spawn_features"] = [];
+                const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0 && l !== "[MERGE]" && l !== "[ENDMERGE]" && l !== "CREATURES" && l !== "END CREATURES");
+                for (const line of lines)
+                {
+                    var [_, diff, rest] = line.match(/^\(([^)]+)\)(.*)$/);
+                    if (diff.toLowerCase() !== loadedDifficulty.toLowerCase())
+                        continue;
+                    var parts = rest.split(" : ");
+                    if (parts.length === 4)
+                    {
+                        var room = parts[1];
+                        if (room === "OFFSCREEN")
+                            room = "OffScreenDen_" + region;
+                        var den = parts[2];
+                        var spawns = parts[3];
+                        var individualSpawns = spawns.split(", ");
+                        var spawnData = null;
+                        var spawnCret = null;
+                        var spawnProb = null;
+                        if (individualSpawns[0].split("-").length > 2)
+                            spawnData = individualSpawns[0].split("-")[1];
+
+                        const spawn = {
+                            is_lineage: true,
+                            amount: 1,
+                            creature: individualSpawns[0].split("-")[0] === "NONE" ? "" : spawnParts[0],
+                            spawn_data: spawnData === null ? null : spawnData
+                        };
+
+                        const lineage = [];
+                        const lineageProbs = [];
+                        const lineageData = [];
+                        for (var linSpawn of individualSpawns) {
+                            var spawnParts = linSpawn.split("-");
+                            spawnData = null;
+                            if (spawnParts.length > 2)
+                            {
+                                spawnCret = spawnParts[0] === "NONE" ? "" : spawnParts[0];
+                                spawnData = spawnParts[1];
+                                spawnProb = spawnParts[2];
+                            }
+                            else
+                            {
+                                spawnCret = spawnParts[0] === "NONE" ? "" : spawnParts[0];
+                                spawnProb = spawnParts[1];
+                            }
+                            lineage.push(spawnCret);
+                            lineageProbs.push(spawnProb);
+                            lineageData.push(spawnData === null ? null : spawnData);
+                        }
+                        spawn.lineage = lineage;
+                        spawn.lineage_probs = lineageProbs;
+                        spawn.lineage_data = lineageData;
+
+                        if (spawn.lineage.every(s => s === ""))
+                            continue;
+
+                        const newSpawnFeature = {
+                            type: "Feature",
+                            properties: {
+                                room: room,
+                                den: parseInt(den),
+                                spawns: [spawn]
+                            }
+                        };
+                        var node = spawnToNode(newSpawnFeature, loadedDifficulty);
+                        newSpawnFeature["geometry"] = {
+                            type: "Point",
+                            coordinates: [node.geometry.coordinates[0], node.geometry.coordinates[1]]
+                        };
+
+                        var currSpawnFeature = nodeToSpawn(node, loadedDifficulty);
+                        if (!currSpawnFeature)
+                        {
+                            regionJson[`${loadedDifficulty}-${region}`]["spawn_features"].push(newSpawnFeature);
+                        }
+                        else
+                        {
+                            currSpawnFeature.properties.spawns.push(spawn);
+                        }
+                    }
+                    else
+                    {
+                        var room = parts[0];
+                        if (room === "OFFSCREEN")
+                            room = "OffScreenDen_" + region;
+                        var spawns = parts[1];
+                        var individualSpawns = spawns.split(", ");
+                        for (var indviSpawn of individualSpawns)
+                        {
+                            var spawnAm = null;
+                            var spawnCret = null;
+                            var spawnData = null;
+                            var parts = indviSpawn.split("-");
+                            var den = parts[0];
+                            spawnCret = parts[1];
+                            if (spawnCret === "NONE")
+                                continue;
+                            switch (parts.length)
+                            {
+                                case 2:
+                                    spawnAm = 1;
+                                    break;
+                                case 3:
+                                    if (parts[2].includes("{"))
+                                    {
+                                        spawnData = parts[2];
+                                        spawnAm = 1;
+                                    }
+                                    else
+                                        spawnAm = parts[2];
+                                    break;
+                                case 4:
+                                    spawnData = parts[2];
+                                    spawnAm = parts[3];
+                                    break;
+                            }
+
+                            const spawn = {
+                                is_lineage: false,
+                                amount: Number(spawnAm),
+                                creature: spawnCret,
+                                spawn_data: spawnData === null ? null : spawnData
+                            };
+
+                            const newSpawnFeature = {
+                                type: "Feature",
+                                properties: {
+                                    room: room,
+                                    den: parseInt(den),
+                                    spawns: [spawn]
+                                }
+                            };
+                            var node = spawnToNode(newSpawnFeature, loadedDifficulty);
+                            newSpawnFeature["geometry"] = {
+                                type: "Point",
+                                coordinates: [node.geometry.coordinates[0], node.geometry.coordinates[1]]
+                            };
+
+                            var currSpawnFeature = nodeToSpawn(node, loadedDifficulty);
+                            if (!currSpawnFeature)
+                            {
+                                regionJson[`${loadedDifficulty}-${region}`]["spawn_features"].push(newSpawnFeature);
+                            }
+                            else
+                            {
+                                currSpawnFeature.properties.spawns.push(spawn);
+                            }
+                        }
+                    }
+                }
+
+                if (regionJson[`${loadedDifficulty}-${region}`]["spawn_features"].length > 0)
+                    drawSpawns(loadedDifficulty);
+            }
+
+            uploadBtn.disabled = false;
+            fileInput.value = '';
+        });
+
 
         // Region stuff
         function drawSpawns(pdifficulty) {
