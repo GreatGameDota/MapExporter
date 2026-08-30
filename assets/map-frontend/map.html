@@ -848,7 +848,7 @@
                     </div>
                     <div>
                         <label>Spawn data</label>
-                        <input type="text" class="f-spawn-data" value="${spawn.spawn_data ?? ''}" placeholder="{PreCycle}" />
+                        <input type="text" class="f-spawn-data" value="${spawn.spawn_data ?? ''}" placeholder="{PreCycle|Seed:123}" />
                     </div>
                     <label>
                         <input type="checkbox" class="f-is-lineage" ${isLineage ? 'checked' : ''} />
@@ -976,6 +976,25 @@
 
         function spawnFeaturesToWorldTxt(spawnFeatures, originalSpawnFeatures) {
             let lines = [];
+            for (const feature of originalSpawnFeatures) {
+                var room = feature.properties.room;
+                if (room.toLowerCase().includes("offscreen"))
+                    room = "OFFSCREEN";
+                const den = feature.properties.den;
+                for (const spawn of feature.properties.spawns) {
+                    var creature = spawn.creature;
+                    const amount = spawn.amount;
+                    const spawnData = spawn.spawn_data ?? '';
+                    var spawnStr = `[FINDLINESTART]`;
+                    if (spawn.is_lineage) {
+                        spawnStr += "LINEAGE : ";
+                    }
+                    spawnStr += `${room} : ${den}`;
+                    lines.push(spawnStr);
+                    lines.push(`[ADDBEFORE](X-${loadedDifficulty.charAt(0).toUpperCase() + loadedDifficulty.slice(1)})`);
+                }
+            }
+
             var origSpawnsMap = {};
             lines.push("[MERGE]");
             lines.push("CREATURES");
@@ -1137,7 +1156,7 @@
             if (world.toLowerCase() == region.toLowerCase())
             {
                 regionJson[`${loadedDifficulty}-${region}`]["spawn_features"] = [];
-                const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0 && l !== "[MERGE]" && l !== "[ENDMERGE]" && l !== "CREATURES" && l !== "END CREATURES");
+                const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0 && l !== "[MERGE]" && l !== "[ENDMERGE]" && l !== "CREATURES" && l !== "END CREATURES" && !l.includes("REPLACE") && !l.includes("FIND") && !l.includes("ADD"));
                 for (const line of lines)
                 {
                     var [_, diff, rest] = line.match(/^\(([^)]+)\)(.*)$/);
