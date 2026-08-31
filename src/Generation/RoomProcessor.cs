@@ -14,6 +14,7 @@ namespace MapExporterNew.Generation
             List<RoomBoxInfo> roomBoxes = [];
             List<RoomTagInfo> roomTags = [];
             List<RoomNodeInfo> roomNodes = [];
+            List<RoomDevPosInfo> roomPos = [];
 
             int i = 0;
             foreach (var room in regionInfo.rooms.Values)
@@ -84,6 +85,12 @@ namespace MapExporterNew.Generation
                     });
                 }
 
+                roomPos.Add(new RoomDevPosInfo
+                {
+                    room = room.roomName,
+                    pos = room.devPos
+                });
+
                 i++;
                 // yield return (float)i / regionInfo.rooms.Count;
             }
@@ -91,6 +98,7 @@ namespace MapExporterNew.Generation
             owner.metadata["room_features"] = roomBoxes;
             owner.metadata["roomtag_features"] = roomTags;
             owner.metadata["room_nodes"] = roomNodes;
+            owner.metadata["room_devPos"] = roomPos;
             yield return 1f;
             yield break;
         }
@@ -182,6 +190,35 @@ namespace MapExporterNew.Generation
                         {
                             { "room", room },
                             { "name", name }
+                        }
+                    }
+                };
+            }
+        }
+
+        private struct RoomDevPosInfo : IJsonObject
+        {
+            public string room;
+            public Vector2 pos;
+
+            public Dictionary<string, object> ToJson()
+            {
+                return new Dictionary<string, object>()
+                {
+                    { "type", "Feature" },
+                    {
+                        "geometry",
+                        new Dictionary<string, object>()
+                        {
+                            {"type", "Point" },
+                            { "coordinates", Vector2ToArray(pos) }
+                        }
+                    },
+                    {
+                        "properties",
+                        new Dictionary<string, object>()
+                        {
+                            { "room", room },
                         }
                     }
                 };

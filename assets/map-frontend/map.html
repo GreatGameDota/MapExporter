@@ -773,6 +773,14 @@
             pushState(true); // no navigation so no zoom change
         }
 
+        function placeObject(e) {
+            var devPos = regionJson[`${loadedDifficulty}-${region}`]["room_devPos"].find(node => node.properties.room.toLowerCase() == e.target.feature.properties.name.toLowerCase());
+            if (devPos !== null)
+            {
+                console.log(e.latlng.lng - devPos.geometry.coordinates[0], e.latlng.lat - devPos.geometry.coordinates[1]);
+            }
+        }
+
         // Map
         var map = L.map('mapid', {
             minZoom: -7,
@@ -1570,7 +1578,7 @@
                         layer.on({
                             mouseover: hilightRoom,
                             mouseout: resetHilight,
-                            // click: focusRoom,
+                            click: placeObject,
                             tooltipopen: function (e) {
                                 e.tooltip.setLatLng(L.latLng([].concat(e.target.feature.properties.popupcoords).reverse()));
                                 e.tooltip.getElement().style.removeProperty('opacity'); // 'defaults' amirite
