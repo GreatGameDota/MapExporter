@@ -118,6 +118,32 @@
             margin-top: -25px;
         }
 
+        .placed-ripple-image {
+            position: absolute;
+            right: -20px;
+            top: -20px;
+        }
+
+        .delete-ripple {
+            position: absolute;
+            right: -25px;
+            top: 15px;
+            width: 20px;
+            height: 20px;
+            padding: 0;
+            border: none;
+            border-radius: 50%;
+            background-color: rgba(255, 50, 50, 0.8);
+            color: white;
+            cursor: pointer;
+            z-index: 1000;
+            transition: background-color 0.2s;
+        }
+
+        .delete-ripple:hover {
+            background-color: rgba(255, 100, 100, 1);
+        }
+
         .roomtag-entry {
             display: none;
             /* to be overwritten */
@@ -778,7 +804,88 @@
             if (devPos !== null)
             {
                 console.log(e.latlng.lng - devPos.geometry.coordinates[0], e.latlng.lat - devPos.geometry.coordinates[1]);
+
+                const newRipple = {
+                    type: "Feature",
+                    properties: {
+                        object: "RippleSpawnEgg",
+                        id: devPos.properties.room + "_" + new Date().toISOString(),
+                        room: devPos.properties.room,
+                        position: [e.latlng.lng - devPos.geometry.coordinates[0], e.latlng.lat - devPos.geometry.coordinates[1]]
+                    },
+                    geometry: {
+                        type: "Point",
+                        coordinates: [e.latlng.lng, e.latlng.lat]
+                    }
+                };
+
+                regionJson[`${loadedDifficulty}-${region}`]["placed_ripple_spawns"].push(newRipple);
+                drawPlacedRipples(loadedDifficulty);
             }
+        }
+
+        function drawPlacedRipples(pdifficulty) {
+            let hadPlacedRipples = map.hasLayer(placedRippleLayer) || loadedRegion == null;
+            if (placedRippleLayer != null) {
+                overlays.removeLayer(placedRippleLayer);
+                map.removeLayer(placedRippleLayer);
+            }
+
+            const placedRipples = regionJson[`${pdifficulty}-${region}`]["placed_ripple_spawns"] || [];
+
+            placedRippleLayer = L.featureGroup();
+
+            for (const feature of placedRipples) {
+                const latlng = L.latLng(feature.geometry.coordinates[1], feature.geometry.coordinates[0]);
+                const id = feature.properties.id;
+                
+                let ripplehtml = `
+                    <div>
+                        <img class="placed-ripple-image" src="./resources/icons/ripplespawnegg.png"/>
+                        <button class="delete-ripple" data-id="${id}" title="Delete ripple spawn">x</button>
+                    </div>`;
+
+                const marker = L.marker(latlng, {
+                    icon: L.divIcon({
+                        className: 'placed-ripple-divs',
+                        html: ripplehtml,
+                    }),
+                    interactive: true,
+                });
+
+                marker.on('add', function() {
+                    const container = this.getElement();
+                    if (container) {
+                        const deleteBtn = container.querySelector('.delete-ripple');
+                        if (deleteBtn) {
+                            const clickHandler = (e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                regionJson[`${pdifficulty}-${region}`]["placed_ripple_spawns"] = 
+                                    regionJson[`${pdifficulty}-${region}`]["placed_ripple_spawns"].filter(r => r.properties.id !== id);
+                                drawPlacedRipples(pdifficulty);
+                            };
+                            deleteBtn.addEventListener('click', clickHandler);
+                            deleteBtn._clickHandler = clickHandler;
+                        }
+                    }
+                });
+
+                marker.on('remove', function() {
+                    const container = this.getElement();
+                    if (container) {
+                        const deleteBtn = container.querySelector('.delete-ripple');
+                        if (deleteBtn && deleteBtn._clickHandler) {
+                            deleteBtn.removeEventListener('click', deleteBtn._clickHandler);
+                        }
+                    }
+                });
+
+                placedRippleLayer.addLayer(marker);
+            }
+
+            if (hadPlacedRipples) placedRippleLayer.addTo(map);
+            overlays.addOverlay(placedRippleLayer, "Placed Ripple Spawns");
         }
 
         // Map
@@ -1123,6 +1230,22 @@
                 const worldFolder = modifyFolder.folder('world');
                 const regionFolder = worldFolder.folder(region.toLowerCase());
                 regionFolder.file(`world_${region.toLowerCase()}.txt`, spawnFeaturesToWorldTxt(regionJson[`${loadedDifficulty}-${region}`]["spawn_features"], originalRegionJson[`${loadedDifficulty}-${region}`]["spawn_features"]));
+                
+                var roomSettingsMap = {};
+                var regionSettingsFolder = worldFolder.folder(region.toLowerCase() + "-rooms");
+                var filterList = ["White", "Yellow", "Red", "Rivulet", "Artificer", "Saint", "Spear", "Gourmand", "Watcher"].filter(c => c !== loadedDifficulty.charAt(0).toUpperCase() + loadedDifficulty.slice(1));
+                for (var placedRipple of regionJson[`${loadedDifficulty}-${region}`]["placed_ripple_spawns"]) {
+                    if (!roomSettingsMap[placedRipple.properties.room.toLowerCase()])
+                    {
+                        roomSettingsMap[placedRipple.properties.room.toLowerCase()] = `PlacedObjects: RippleSpawnEgg><${placedRipple.properties.position[0]}><${placedRipple.properties.position[1]}><, Filter><${placedRipple.properties.position[0]}><${placedRipple.properties.position[1]}><10~0~2~3~${filterList.join("|")}, `;
+                    } else {
+                        roomSettingsMap[placedRipple.properties.room.toLowerCase()] += `RippleSpawnEgg><${placedRipple.properties.position[0]}><${placedRipple.properties.position[1]}><, Filter><${placedRipple.properties.position[0]}><${placedRipple.properties.position[1]}><10~0~2~3~${filterList.join("|")}, `;
+                    }
+                }
+
+                for (const [key, value] of Object.entries(roomSettingsMap)) {
+                    regionSettingsFolder.file(`${key}_settings.txt`, `[MERGE]\n${value}\n[ENDMERGE]`);
+                }
 
                 const blob = await zip.generateAsync({ type: 'blob' });
                 const url = URL.createObjectURL(blob);
@@ -1491,6 +1614,7 @@
         var warpPointsLayer;
         var warpDestsLayer;
         var rippleEggsLayer;
+        var placedRippleLayer;
         var vistaPointsLayer;
         var creatureDenLayer;
         var loadedDifficulty = null;
@@ -1534,6 +1658,11 @@
             getJsonObject(`${roompath}/region.json`, function (json) {
                 regionJson[`${pdifficulty}-${region}`] = JSON.parse(JSON.stringify(json));
                 originalRegionJson[`${pdifficulty}-${region}`] = JSON.parse(JSON.stringify(json));
+
+                if (!regionJson[`${pdifficulty}-${region}`]["placed_ripple_spawns"]) {
+                    regionJson[`${pdifficulty}-${region}`]["placed_ripple_spawns"] = [];
+                }
+
                 var roomjson = json;
                 if ('copyingrooms' in json) {
                     getJsonObject(`${roompath}/${region_url}/region.json`, function (copyjson) {
@@ -1629,6 +1758,9 @@
 
                 // Spawns
                 drawSpawns(pdifficulty);
+
+                // Placed Ripple Spawns
+                drawPlacedRipples(pdifficulty);
 
                 // Placed Objects
                 let hadPlacedObjects = map.hasLayer(placedObjectsLayer) || loadedRegion == null;
