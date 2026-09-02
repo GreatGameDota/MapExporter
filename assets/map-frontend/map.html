@@ -118,32 +118,6 @@
             margin-top: -25px;
         }
 
-        .placed-ripple-image {
-            position: absolute;
-            right: -20px;
-            top: -20px;
-        }
-
-        .delete-ripple {
-            position: absolute;
-            right: -25px;
-            top: 15px;
-            width: 20px;
-            height: 20px;
-            padding: 0;
-            border: none;
-            border-radius: 50%;
-            background-color: rgba(255, 50, 50, 0.8);
-            color: white;
-            cursor: pointer;
-            z-index: 1000;
-            transition: background-color 0.2s;
-        }
-
-        .delete-ripple:hover {
-            background-color: rgba(255, 100, 100, 1);
-        }
-
         .roomtag-entry {
             display: none;
             /* to be overwritten */
@@ -472,6 +446,63 @@
             line-height: 1;
         }
         .modal-close:hover { color: #222; }
+
+        .placed-object-menu {
+            position: fixed;
+            display: none;
+            background: #000;
+            z-index: 1000;
+            max-height: 25vh;
+            overflow-y: auto;
+            min-width: 25vw;
+        }
+
+        .placed-object-menu.open {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 4px;
+            padding: 8px;
+        }
+
+        .placed-object-menu-item {
+            padding: 8px 4px;
+            cursor: pointer;
+            color: white;
+            justify-items: center;
+            align-items: center;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .placed-object-menu-item:hover {
+            background-color: #333333;
+        }
+
+        .placed-object-image {
+            position: absolute;
+            right: -20px;
+            top: -20px;
+        }
+
+        .delete-object-btn {
+            position: absolute;
+            right: -25px;
+            top: 15px;
+            width: 20px;
+            height: 20px;
+            padding: 0;
+            border: none;
+            border-radius: 50%;
+            background-color: rgba(255, 50, 50, 0.8);
+            color: white;
+            cursor: pointer;
+            z-index: 1000;
+            transition: background-color 0.2s;
+        }
+
+        .delete-object-btn:hover {
+            background-color: rgba(255, 100, 100, 1);
+        }
     </style>
 </head>
 
@@ -480,7 +511,7 @@
 
     <button id="exportBtn" style="position: absolute;bottom: 24px;left: 500px;z-index: 1000;">Export</button>
     <button id="uploadBtn" style="position: absolute;bottom: 24px;left: 600px;z-index: 1000;">Import .txt</button>
-    <input type="file" id="fileInput" accept=".txt" single style="display:none" />
+    <input type="file" id="fileInput" accept=".txt" multiple style="display:none" />
 
     <div class="modal-overlay rw-text" id="modalOverlay">
         <div class="modal-box">
@@ -496,6 +527,8 @@
             </div>
         </div>
     </div>
+
+    <div class="placed-object-menu" id="placedObjectMenu" /div>
 
     <div class="side-panel left-panel rw-text collapsible collapsed">
         <div style="padding-left: 8px; padding-bottom: 8px;">
@@ -523,6 +556,48 @@
     <script>
         'use strict';
         var loadedCount = 1;
+
+        const PLACED_OBJECT_TYPES = [
+            'ripplespawnegg', 'flarebomb', 'puffball', 'danglefruit', 'datapearl', 'seedcob', 'waternut',
+            'karmaflower', 'mushroom', 'slimemold', 'flylure', 'firecrackerplant', 'reliablespear',
+            'sporeplant', 'needleegg', 'bubblegrass', 'jellyfish', 'vulturegrub', 'deadvulturegrub',
+            'hazer', 'deadhazer', 'rattler', 'bigjellyfish', 'stowaway', 'placedboxworm',
+            'placedfiresprite', 'placeddrillcrab', 'placedrats', 'placedfrog', 'placedloach',
+            'placedrotloach', 'placedbarnacles', 'lantern', 'graffitibomb', 'gooieduck', 'lillypuck',
+            'glowweed', 'dandelionpeach', 'rottendanglefruit', 'rottenseedcob'
+        ];
+
+        class PlacedObjectData {
+            constructor(objectType, position, room, id = null) {
+                this.type = 'Feature';
+                this.objectType = objectType;
+                this.position = position;
+                this.room = room;
+                this.id = id || room + '_' + new Date().toISOString();
+            }
+
+            toGeoJSONFeature(absoluteCoordinates) {
+                return {
+                    type: 'Feature',
+                    properties: {
+                        object: this.objectType,
+                        id: this.id,
+                        room: this.room,
+                        position: this.position
+                    },
+                    geometry: {
+                        type: 'Point',
+                        coordinates: absoluteCoordinates
+                    }
+                };
+            }
+
+            toRoomSettingsString(difficulty, filterList) {
+                const objectName = this.objectType.charAt(0).toUpperCase() + this.objectType.slice(1);
+                const filterStr = filterList.join('|');
+                return `${objectName}><${this.position[0]}><${this.position[1]}><, Filter><${this.position[0]}><${this.position[1]}><10~0~2~3~${filterStr}, `;
+            }
+        }
 
         // Dynamic navigation
         var dynamicNavigation; // Stupid browsers
@@ -616,6 +691,11 @@
         window.onpopstate = newState;
         window.onload = newState;
 
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializePlacedObjectMenu);
+        } else {
+            initializePlacedObjectMenu();
+        }
 
         // Setup or something like that
         var regions = {};
@@ -763,6 +843,40 @@
             pushState();
         }
 
+        var selectedRoom;
+        var selectedCoords;
+
+        function showPlacedObjectMenu(e) {
+            selectedRoom = e.target.feature.properties.name;
+            selectedCoords = e.latlng;
+
+            const menu = document.getElementById('placedObjectMenu');
+            menu.style.left = e.originalEvent.pageX + 'px';
+            menu.style.top = e.originalEvent.pageY + 'px';
+            menu.classList.add('open');
+
+            const closeHandler = () => {
+                menu.classList.remove('open');
+                document.removeEventListener('click', closeHandler);
+            };
+            document.addEventListener('click', closeHandler);
+        }
+
+        function placeSelectedObject(objectType) {
+            const devPos = regionJson[`${loadedDifficulty}-${region}`]["room_devPos"].find(node => node.properties.room.toLowerCase() === selectedRoom.toLowerCase());
+
+            if (!devPos) return;
+
+            const placedObj = new PlacedObjectData(objectType, [selectedCoords.lng - devPos.geometry.coordinates[0], selectedCoords.lat - devPos.geometry.coordinates[1]], selectedRoom);
+            const feature = placedObj.toGeoJSONFeature([selectedCoords.lng, selectedCoords.lat]);
+
+            regionJson[`${loadedDifficulty}-${region}`]["placed_objects"].push(feature);
+            drawPlacedObjects(loadedDifficulty);
+
+            const menu = document.getElementById('placedObjectMenu');
+            menu.classList.remove('open');
+        }
+
         function openModal(e) {
             _openModal(e.target.feature);
         }
@@ -799,56 +913,31 @@
             pushState(true); // no navigation so no zoom change
         }
 
-        function placeObject(e) {
-            var devPos = regionJson[`${loadedDifficulty}-${region}`]["room_devPos"].find(node => node.properties.room.toLowerCase() == e.target.feature.properties.name.toLowerCase());
-            if (devPos !== null)
-            {
-                console.log(e.latlng.lng - devPos.geometry.coordinates[0], e.latlng.lat - devPos.geometry.coordinates[1]);
-
-                const newRipple = {
-                    type: "Feature",
-                    properties: {
-                        object: "RippleSpawnEgg",
-                        id: devPos.properties.room + "_" + new Date().toISOString(),
-                        room: devPos.properties.room,
-                        position: [e.latlng.lng - devPos.geometry.coordinates[0], e.latlng.lat - devPos.geometry.coordinates[1]]
-                    },
-                    geometry: {
-                        type: "Point",
-                        coordinates: [e.latlng.lng, e.latlng.lat]
-                    }
-                };
-
-                regionJson[`${loadedDifficulty}-${region}`]["placed_ripple_spawns"].push(newRipple);
-                drawPlacedRipples(loadedDifficulty);
-            }
-        }
-
-        function drawPlacedRipples(pdifficulty) {
-            let hadPlacedRipples = map.hasLayer(placedRippleLayer) || loadedRegion == null;
-            if (placedRippleLayer != null) {
-                overlays.removeLayer(placedRippleLayer);
-                map.removeLayer(placedRippleLayer);
+        function drawPlacedObjects(pdifficulty) {
+            let hadPlacedObjects = map.hasLayer(placedObjectsMarkerLayer) || loadedRegion == null;
+            if (placedObjectsMarkerLayer != null) {
+                overlays.removeLayer(placedObjectsMarkerLayer);
+                map.removeLayer(placedObjectsMarkerLayer);
             }
 
-            const placedRipples = regionJson[`${pdifficulty}-${region}`]["placed_ripple_spawns"] || [];
+            const placedObjs = regionJson[`${pdifficulty}-${region}`]["placed_objects"] || [];
+            placedObjectsMarkerLayer = L.featureGroup();
 
-            placedRippleLayer = L.featureGroup();
-
-            for (const feature of placedRipples) {
+            for (const feature of placedObjs) {
                 const latlng = L.latLng(feature.geometry.coordinates[1], feature.geometry.coordinates[0]);
                 const id = feature.properties.id;
+                const objectType = feature.properties.object;
                 
-                let ripplehtml = `
+                let objhtml = `
                     <div>
-                        <img class="placed-ripple-image" src="./resources/icons/ripplespawnegg.png"/>
-                        <button class="delete-ripple" data-id="${id}" title="Delete ripple spawn">x</button>
+                        <img class="placed-object-image" src="./resources/icons/${objectType}.png"/>
+                        <button class="delete-object-btn" data-id="${id}" title="Delete object">x</button>
                     </div>`;
 
                 const marker = L.marker(latlng, {
                     icon: L.divIcon({
-                        className: 'placed-ripple-divs',
-                        html: ripplehtml,
+                        className: 'placed-object-divs',
+                        html: objhtml,
                     }),
                     interactive: true,
                 });
@@ -856,14 +945,14 @@
                 marker.on('add', function() {
                     const container = this.getElement();
                     if (container) {
-                        const deleteBtn = container.querySelector('.delete-ripple');
+                        const deleteBtn = container.querySelector('.delete-object-btn');
                         if (deleteBtn) {
                             const clickHandler = (e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                regionJson[`${pdifficulty}-${region}`]["placed_ripple_spawns"] = 
-                                    regionJson[`${pdifficulty}-${region}`]["placed_ripple_spawns"].filter(r => r.properties.id !== id);
-                                drawPlacedRipples(pdifficulty);
+                                regionJson[`${pdifficulty}-${region}`]["placed_objects"] = 
+                                    regionJson[`${pdifficulty}-${region}`]["placed_objects"].filter(obj => obj.properties.id !== id);
+                                drawPlacedObjects(pdifficulty);
                             };
                             deleteBtn.addEventListener('click', clickHandler);
                             deleteBtn._clickHandler = clickHandler;
@@ -874,18 +963,18 @@
                 marker.on('remove', function() {
                     const container = this.getElement();
                     if (container) {
-                        const deleteBtn = container.querySelector('.delete-ripple');
+                        const deleteBtn = container.querySelector('.delete-object-btn');
                         if (deleteBtn && deleteBtn._clickHandler) {
                             deleteBtn.removeEventListener('click', deleteBtn._clickHandler);
                         }
                     }
                 });
 
-                placedRippleLayer.addLayer(marker);
+                placedObjectsMarkerLayer.addLayer(marker);
             }
 
-            if (hadPlacedRipples) placedRippleLayer.addTo(map);
-            overlays.addOverlay(placedRippleLayer, "Placed Ripple Spawns");
+            if (hadPlacedObjects) placedObjectsMarkerLayer.addTo(map);
+            overlays.addOverlay(placedObjectsMarkerLayer, "Placed Objects");
         }
 
         // Map
@@ -1234,12 +1323,16 @@
                 var roomSettingsMap = {};
                 var regionSettingsFolder = worldFolder.folder(region.toLowerCase() + "-rooms");
                 var filterList = ["White", "Yellow", "Red", "Rivulet", "Artificer", "Saint", "Spear", "Gourmand", "Watcher"].filter(c => c !== loadedDifficulty.charAt(0).toUpperCase() + loadedDifficulty.slice(1));
-                for (var placedRipple of regionJson[`${loadedDifficulty}-${region}`]["placed_ripple_spawns"]) {
-                    if (!roomSettingsMap[placedRipple.properties.room.toLowerCase()])
-                    {
-                        roomSettingsMap[placedRipple.properties.room.toLowerCase()] = `PlacedObjects: RippleSpawnEgg><${placedRipple.properties.position[0]}><${placedRipple.properties.position[1]}><, Filter><${placedRipple.properties.position[0]}><${placedRipple.properties.position[1]}><10~0~2~3~${filterList.join("|")}, `;
+
+                for (var placedObj of regionJson[`${loadedDifficulty}-${region}`]["placed_objects"]) {
+                    const objData = new PlacedObjectData(placedObj.properties.object, placedObj.properties.position, placedObj.properties.room);
+                    const roomKey = placedObj.properties.room.toLowerCase();
+                    const settingsStr = objData.toRoomSettingsString(loadedDifficulty, filterList);
+
+                    if (!roomSettingsMap[roomKey]) {
+                        roomSettingsMap[roomKey] = `PlacedObjects: ${settingsStr}`;
                     } else {
-                        roomSettingsMap[placedRipple.properties.room.toLowerCase()] += `RippleSpawnEgg><${placedRipple.properties.position[0]}><${placedRipple.properties.position[1]}><, Filter><${placedRipple.properties.position[0]}><${placedRipple.properties.position[1]}><10~0~2~3~${filterList.join("|")}, `;
+                        roomSettingsMap[roomKey] += settingsStr;
                     }
                 }
 
@@ -1610,11 +1703,11 @@
         var geometryLayer;
         var densLayer;
         var placedObjectsLayer;
+        var placedObjectsMarkerLayer;
         var roomTagsLayer;
         var warpPointsLayer;
         var warpDestsLayer;
         var rippleEggsLayer;
-        var placedRippleLayer;
         var vistaPointsLayer;
         var creatureDenLayer;
         var loadedDifficulty = null;
@@ -1659,8 +1752,8 @@
                 regionJson[`${pdifficulty}-${region}`] = JSON.parse(JSON.stringify(json));
                 originalRegionJson[`${pdifficulty}-${region}`] = JSON.parse(JSON.stringify(json));
 
-                if (!regionJson[`${pdifficulty}-${region}`]["placed_ripple_spawns"]) {
-                    regionJson[`${pdifficulty}-${region}`]["placed_ripple_spawns"] = [];
+                if (!regionJson[`${pdifficulty}-${region}`]["placed_objects"]) {
+                    regionJson[`${pdifficulty}-${region}`]["placed_objects"] = [];
                 }
 
                 var roomjson = json;
@@ -1707,7 +1800,7 @@
                         layer.on({
                             mouseover: hilightRoom,
                             mouseout: resetHilight,
-                            click: placeObject,
+                            contextmenu: showPlacedObjectMenu,
                             tooltipopen: function (e) {
                                 e.tooltip.setLatLng(L.latLng([].concat(e.target.feature.properties.popupcoords).reverse()));
                                 e.tooltip.getElement().style.removeProperty('opacity'); // 'defaults' amirite
@@ -1759,8 +1852,8 @@
                 // Spawns
                 drawSpawns(pdifficulty);
 
-                // Placed Ripple Spawns
-                drawPlacedRipples(pdifficulty);
+                // Placed Objects
+                drawPlacedObjects(pdifficulty);
 
                 // Placed Objects
                 let hadPlacedObjects = map.hasLayer(placedObjectsLayer) || loadedRegion == null;
@@ -2530,6 +2623,26 @@
             }
             else {
                 throw new SyntaxError("Error parsing rule {" + rule + "}: either did not begin with (, ', or number or end with the corresponding matching character!");
+            }
+        }
+
+        function initializePlacedObjectMenu() {
+            const menu = document.getElementById('placedObjectMenu');
+            menu.innerHTML = '';
+
+            for (const objectType of PLACED_OBJECT_TYPES) {
+                const item = document.createElement('div');
+                item.className = 'placed-object-menu-item';
+                item.innerHTML = `
+                    <img src="./resources/icons/${objectType}.png" />
+                    ${objectType}
+                `;
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    placeSelectedObject(objectType);
+                });
+                menu.appendChild(item);
             }
         }
 
