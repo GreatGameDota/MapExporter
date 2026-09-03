@@ -454,12 +454,12 @@
             z-index: 1000;
             max-height: 25vh;
             overflow-y: auto;
-            min-width: 25vw;
+            min-width: 15vw;
         }
 
         .placed-object-menu.open {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
             gap: 4px;
             padding: 8px;
         }
@@ -567,13 +567,95 @@
             'glowweed', 'dandelionpeach', 'rottendanglefruit', 'rottenseedcob'
         ];
 
+        const objectMap = {};
+        // ripplespawnegg
+        objectMap[PLACED_OBJECT_TYPES[0]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[0])}><${position[0]}><${position[1]}><, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // flarebomb
+        objectMap[PLACED_OBJECT_TYPES[1]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[1])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // puffball
+        objectMap[PLACED_OBJECT_TYPES[2]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[2])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // danglefruit
+        objectMap[PLACED_OBJECT_TYPES[3]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[3])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // datapearl
+        objectMap[PLACED_OBJECT_TYPES[4]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[4])}><${position[0]}><${position[1]}><0~0~0~0~Misc~0, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // seedcob
+        objectMap[PLACED_OBJECT_TYPES[5]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[5])}><${position[0]}><${position[1]}><0~0~7~10, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // waternut
+        objectMap[PLACED_OBJECT_TYPES[6]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[6])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // karmaflower
+        objectMap[PLACED_OBJECT_TYPES[7]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[7])}><${position[0]}><${position[1]}><0~0~5~7, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // mushroom
+        objectMap[PLACED_OBJECT_TYPES[8]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[8])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // slimemold
+        objectMap[PLACED_OBJECT_TYPES[9]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[9])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // flylure
+        objectMap[PLACED_OBJECT_TYPES[10]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[10])}><${position[0]}><${position[1]}><0~0~4~9, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // firecrackerplant
+        objectMap[PLACED_OBJECT_TYPES[11]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[11])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // reliablespear
+        objectMap[PLACED_OBJECT_TYPES[12]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[12])}><${position[0]}><${position[1]}><, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // sporeplant
+        objectMap[PLACED_OBJECT_TYPES[13]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[13])}><${position[0]}><${position[1]}><0~0~7~10, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // needleegg
+        objectMap[PLACED_OBJECT_TYPES[14]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[14])}><${position[0]}><${position[1]}><0~0~4~9, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // bubblegrass
+        objectMap[PLACED_OBJECT_TYPES[15]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[15])}><${position[0]}><${position[1]}><0~0~4~9, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // jellyfish
+        objectMap[PLACED_OBJECT_TYPES[16]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[16])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // vulturegrub
+        objectMap[PLACED_OBJECT_TYPES[17]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[17])}><${position[0]}><${position[1]}><0~0~7~10, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // deadvulturegrub
+        objectMap[PLACED_OBJECT_TYPES[18]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[18])}><${position[0]}><${position[1]}><0~0~7~10, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // hazer
+        objectMap[PLACED_OBJECT_TYPES[19]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[19])}><${position[0]}><${position[1]}><0~0~7~10, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // deadhazer
+        objectMap[PLACED_OBJECT_TYPES[20]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[20])}><${position[0]}><${position[1]}><0~0~7~10, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // rattler
+        objectMap[PLACED_OBJECT_TYPES[21]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[21])}><${position[0]}><${position[1]}><, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // bigjellyfish
+        objectMap[PLACED_OBJECT_TYPES[22]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[22])}><${position[0]}><${position[1]}><0~100, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // stowaway
+        objectMap[PLACED_OBJECT_TYPES[23]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[23])}><${position[0]}><${position[1]}><0~100, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // placedboxworm
+        objectMap[PLACED_OBJECT_TYPES[24]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[24])}><${position[0]}><${position[1]}><, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // placedfiresprite
+        objectMap[PLACED_OBJECT_TYPES[25]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[25])}><${position[0]}><${position[1]}><, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // placeddrillcrab
+        objectMap[PLACED_OBJECT_TYPES[26]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[26])}><${position[0]}><${position[1]}><, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // placedrats
+        objectMap[PLACED_OBJECT_TYPES[27]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[27])}><${position[0]}><${position[1]}><, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // placedfrog
+        objectMap[PLACED_OBJECT_TYPES[28]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[28])}><${position[0]}><${position[1]}><, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // placedloach
+        objectMap[PLACED_OBJECT_TYPES[29]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[29])}><${position[0]}><${position[1]}><, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // placedrotloach
+        objectMap[PLACED_OBJECT_TYPES[30]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[30])}><${position[0]}><${position[1]}><, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // placedbarnacles
+        objectMap[PLACED_OBJECT_TYPES[31]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[31])}><${position[0]}><${position[1]}><, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // lantern
+        objectMap[PLACED_OBJECT_TYPES[32]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[32])}><${position[0]}><${position[1]}><0~0~4~9, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // graffitibomb
+        objectMap[PLACED_OBJECT_TYPES[33]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[33])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // gooieduck
+        objectMap[PLACED_OBJECT_TYPES[34]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[34])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // lillypuck
+        objectMap[PLACED_OBJECT_TYPES[35]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[35])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // glowweed
+        objectMap[PLACED_OBJECT_TYPES[36]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[36])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // dandelionpeach
+        objectMap[PLACED_OBJECT_TYPES[37]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[37])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // rottendanglefruit
+        objectMap[PLACED_OBJECT_TYPES[38]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[38])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // rottenseedcob
+        objectMap[PLACED_OBJECT_TYPES[39]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[39])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+
         class PlacedObjectData {
-            constructor(objectType, position, room, id = null) {
+            constructor(objectType, position, room) {
                 this.type = 'Feature';
                 this.objectType = objectType;
                 this.position = position;
                 this.room = room;
-                this.id = id || room + '_' + new Date().toISOString();
+                this.id = room + '_' + new Date().toISOString();
             }
 
             toGeoJSONFeature(absoluteCoordinates) {
@@ -593,10 +675,15 @@
             }
 
             toRoomSettingsString(difficulty, filterList) {
-                const objectName = this.objectType.charAt(0).toUpperCase() + this.objectType.slice(1);
-                const filterStr = filterList.join('|');
-                return `${objectName}><${this.position[0]}><${this.position[1]}><, Filter><${this.position[0]}><${this.position[1]}><10~0~2~3~${filterStr}, `;
+                return objectMap[this.objectType](filterList, this.position);
             }
+        }
+
+        function fromRoomSettingsLine(line, room) {
+            let parts = line.split('><');
+            if (parts.length < 3) return null;
+            const [objectType, xStr, yStr] = parts;
+            return new PlacedObjectData(objectType.toLowerCase(), [parseFloat(xStr), parseFloat(yStr)], room);
         }
 
         // Dynamic navigation
@@ -913,6 +1000,97 @@
             pushState(true); // no navigation so no zoom change
         }
 
+        function objectTypeToImage(objectType) {
+            if (objectType === "reliablespear") {
+                objectType = "spear";
+            }
+            if (objectType === "placedboxworm") {
+                objectType = "boxworm";
+            }
+            if (objectType === "placedfiresprite") {
+                objectType = "firesprite";
+            }
+            if (objectType === "placeddrillcrab") {
+                objectType = "drillcrab";
+            }
+            if (objectType === "placedrats") {
+                objectType = "rat";
+            }
+            if (objectType === "placedfrog") {
+                objectType = "frog";
+            }
+            if (objectType === "placedloach") {
+                objectType = "loach";
+            }
+            if (objectType === "placedrotloach") {
+                objectType = "rotloach";
+            }
+            if (objectType === "placedbarnacles") {
+                objectType = "barnacle";
+            }
+            if (objectType === "bigjellyfish") {
+                objectType = "bigjelly";
+            }
+            if (objectType === "deadvulturegrub") {
+                objectType = "vulturegrub";
+            }
+            if (objectType === "deadhazer") {
+                objectType = "hazer";
+            }
+            if (objectType === "stowaway") {
+                objectType = "stowawaybug";
+            }
+
+            return objectType;
+        }
+
+        function objectTypeToDisplayName(objectType) {
+            const displayNames = {
+                "ripplespawnegg": "RippleSpawnEgg",
+                "flarebomb": "FlareBomb",
+                "puffball": "PuffBall",
+                "danglefruit": "DangleFruit",
+                "datapearl": "DataPearl",
+                "seedcob": "SeedCob",
+                "waternut": "WaterNut",
+                "karmaflower": "KarmaFlower",
+                "mushroom": "Mushroom",
+                "slimemold": "SlimeMold",
+                "flylure": "FlyLure",
+                "firecrackerplant": "FirecrackerPlant",
+                "reliablespear": "ReliableSpear",
+                "sporeplant": "SporePlant",
+                "needleegg": "NeedleEgg",
+                "bubblegrass": "BubbleGrass",
+                "jellyfish": "JellyFish",
+                "vulturegrub": "VultureGrub",
+                "deadvulturegrub": "DeadVultureGrub",
+                "hazer": "Hazer",
+                "deadhazer": "DeadHazer",
+                "rattler": "Rattler",
+                "bigjellyfish": "BigJellyFish",
+                "stowaway": "Stowaway",
+                "placedboxworm": "PlacedBoxWorm",
+                "placedfiresprite": "PlacedFireSprite",
+                "placeddrillcrab": "PlacedDrillCrab",
+                "placedrats": "PlacedRats",
+                "placedfrog": "PlacedFrog",
+                "placedloach": "PlacedLoach",
+                "placedrotloach": "PlacedRotLoach",
+                "placedbarnacles": "PlacedBarnacles",
+                "lantern": "Lantern",
+                "graffitibomb": "GraffitiBomb",
+                "gooieduck": "GooieDuck",
+                "lillypuck": "LillyPuck",
+                "glowweed": "GlowWeed",
+                "dandelionpeach": "DandelionPeach",
+                "rottendanglefruit": "RottenDangleFruit",
+                "rottenseedcob": "RottenSeedCob"
+            };
+
+            return displayNames[objectType];
+        }
+
         function drawPlacedObjects(pdifficulty) {
             let hadPlacedObjects = map.hasLayer(placedObjectsMarkerLayer) || loadedRegion == null;
             if (placedObjectsMarkerLayer != null) {
@@ -930,7 +1108,7 @@
                 
                 let objhtml = `
                     <div>
-                        <img class="placed-object-image" src="./resources/icons/${objectType}.png"/>
+                        <img class="placed-object-image" src="./resources/icons/${objectTypeToImage(objectType)}.png"/>
                         <button class="delete-object-btn" data-id="${id}" title="Delete object">x</button>
                     </div>`;
 
@@ -1372,137 +1550,72 @@
         }
 
         fileInput.addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            uploadBtn.disabled = true;
-            const text = await readFileAsText(file);
-
-            const world = file.name.split(".txt")[0].split("_")[1];
-            if (world.toLowerCase() == region.toLowerCase())
+            var hasSettings = Array.from(e.target.files).some(file => file.name.includes("settings"));
+            if (e.target.files.length === 1 && !hasSettings)
             {
-                regionJson[`${loadedDifficulty}-${region}`]["spawn_features"] = [];
-                const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0 && l !== "[MERGE]" && l !== "[ENDMERGE]" && l !== "CREATURES" && l !== "END CREATURES" && !l.includes("REPLACE") && !l.includes("FIND") && !l.includes("ADD"));
-                for (const line of lines)
+                const file = e.target.files[0];
+                uploadBtn.disabled = true;
+                const text = await readFileAsText(file);
+
+                const world = file.name.split(".txt")[0].split("_")[1];
+                if (world.toLowerCase() == region.toLowerCase())
                 {
-                    var [_, diff, rest] = line.match(/^\(([^)]+)\)(.*)$/);
-                    if (diff.toLowerCase() !== loadedDifficulty.toLowerCase())
-                        continue;
-                    var parts = rest.split(" : ");
-                    if (parts.length === 4)
+                    regionJson[`${loadedDifficulty}-${region}`]["spawn_features"] = [];
+                    const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0 && l !== "[MERGE]" && l !== "[ENDMERGE]" && l !== "CREATURES" && l !== "END CREATURES" && !l.includes("REPLACE") && !l.includes("FIND") && !l.includes("ADD"));
+                    for (const line of lines)
                     {
-                        var room = parts[1];
-                        if (room === "OFFSCREEN")
-                            room = "OffScreenDen_" + region;
-                        var den = parts[2];
-                        var spawns = parts[3];
-                        var individualSpawns = spawns.split(", ");
-                        var spawnData = null;
-                        var spawnCret = null;
-                        var spawnProb = null;
-                        if (individualSpawns[0].split("-").length > 2)
-                            spawnData = individualSpawns[0].split("-")[1];
-
-                        const spawn = {
-                            is_lineage: true,
-                            amount: 1,
-                            creature: individualSpawns[0].split("-")[0] === "NONE" ? "" : spawnParts[0],
-                            spawn_data: spawnData === null ? null : spawnData
-                        };
-
-                        const lineage = [];
-                        const lineageProbs = [];
-                        const lineageData = [];
-                        for (var linSpawn of individualSpawns) {
-                            var spawnParts = linSpawn.split("-");
-                            spawnData = null;
-                            if (spawnParts.length > 2)
-                            {
-                                spawnCret = spawnParts[0] === "NONE" ? "" : spawnParts[0];
-                                spawnData = spawnParts[1];
-                                spawnProb = spawnParts[2];
-                            }
-                            else
-                            {
-                                spawnCret = spawnParts[0] === "NONE" ? "" : spawnParts[0];
-                                spawnProb = spawnParts[1];
-                            }
-                            lineage.push(spawnCret);
-                            lineageProbs.push(spawnProb);
-                            lineageData.push(spawnData === null ? null : spawnData);
-                        }
-                        spawn.lineage = lineage;
-                        spawn.lineage_probs = lineageProbs;
-                        spawn.lineage_data = lineageData;
-
-                        if (spawn.lineage.every(s => s === ""))
+                        var [_, diff, rest] = line.match(/^\(([^)]+)\)(.*)$/);
+                        if (diff.toLowerCase() !== loadedDifficulty.toLowerCase())
                             continue;
-
-                        const newSpawnFeature = {
-                            type: "Feature",
-                            properties: {
-                                room: room,
-                                den: parseInt(den),
-                                spawns: [spawn]
-                            }
-                        };
-                        var node = spawnToNode(newSpawnFeature, loadedDifficulty);
-                        newSpawnFeature["geometry"] = {
-                            type: "Point",
-                            coordinates: [node.geometry.coordinates[0], node.geometry.coordinates[1]]
-                        };
-
-                        var currSpawnFeature = nodeToSpawn(node, loadedDifficulty);
-                        if (!currSpawnFeature)
+                        var parts = rest.split(" : ");
+                        if (parts.length === 4)
                         {
-                            regionJson[`${loadedDifficulty}-${region}`]["spawn_features"].push(newSpawnFeature);
-                        }
-                        else
-                        {
-                            currSpawnFeature.properties.spawns.push(spawn);
-                        }
-                    }
-                    else
-                    {
-                        var room = parts[0];
-                        if (room === "OFFSCREEN")
-                            room = "OffScreenDen_" + region;
-                        var spawns = parts[1];
-                        var individualSpawns = spawns.split(", ");
-                        for (var indviSpawn of individualSpawns)
-                        {
-                            var spawnAm = null;
-                            var spawnCret = null;
+                            var room = parts[1];
+                            if (room === "OFFSCREEN")
+                                room = "OffScreenDen_" + region;
+                            var den = parts[2];
+                            var spawns = parts[3];
+                            var individualSpawns = spawns.split(", ");
                             var spawnData = null;
-                            var parts = indviSpawn.split("-");
-                            var den = parts[0];
-                            spawnCret = parts[1];
-                            if (spawnCret === "NONE")
-                                continue;
-                            switch (parts.length)
-                            {
-                                case 2:
-                                    spawnAm = 1;
-                                    break;
-                                case 3:
-                                    if (parts[2].includes("{"))
-                                    {
-                                        spawnData = parts[2];
-                                        spawnAm = 1;
-                                    }
-                                    else
-                                        spawnAm = parts[2];
-                                    break;
-                                case 4:
-                                    spawnData = parts[2];
-                                    spawnAm = parts[3];
-                                    break;
-                            }
+                            var spawnCret = null;
+                            var spawnProb = null;
+                            if (individualSpawns[0].split("-").length > 2)
+                                spawnData = individualSpawns[0].split("-")[1];
 
                             const spawn = {
-                                is_lineage: false,
-                                amount: Number(spawnAm),
-                                creature: spawnCret,
+                                is_lineage: true,
+                                amount: 1,
+                                creature: individualSpawns[0].split("-")[0] === "NONE" ? "" : spawnParts[0],
                                 spawn_data: spawnData === null ? null : spawnData
                             };
+
+                            const lineage = [];
+                            const lineageProbs = [];
+                            const lineageData = [];
+                            for (var linSpawn of individualSpawns) {
+                                var spawnParts = linSpawn.split("-");
+                                spawnData = null;
+                                if (spawnParts.length > 2)
+                                {
+                                    spawnCret = spawnParts[0] === "NONE" ? "" : spawnParts[0];
+                                    spawnData = spawnParts[1];
+                                    spawnProb = spawnParts[2];
+                                }
+                                else
+                                {
+                                    spawnCret = spawnParts[0] === "NONE" ? "" : spawnParts[0];
+                                    spawnProb = spawnParts[1];
+                                }
+                                lineage.push(spawnCret);
+                                lineageProbs.push(spawnProb);
+                                lineageData.push(spawnData === null ? null : spawnData);
+                            }
+                            spawn.lineage = lineage;
+                            spawn.lineage_probs = lineageProbs;
+                            spawn.lineage_data = lineageData;
+
+                            if (spawn.lineage.every(s => s === ""))
+                                continue;
 
                             const newSpawnFeature = {
                                 type: "Feature",
@@ -1528,11 +1641,122 @@
                                 currSpawnFeature.properties.spawns.push(spawn);
                             }
                         }
+                        else
+                        {
+                            var room = parts[0];
+                            if (room === "OFFSCREEN")
+                                room = "OffScreenDen_" + region;
+                            var spawns = parts[1];
+                            var individualSpawns = spawns.split(", ");
+                            for (var indviSpawn of individualSpawns)
+                            {
+                                var spawnAm = null;
+                                var spawnCret = null;
+                                var spawnData = null;
+                                var parts = indviSpawn.split("-");
+                                var den = parts[0];
+                                spawnCret = parts[1];
+                                if (spawnCret === "NONE")
+                                    continue;
+                                switch (parts.length)
+                                {
+                                    case 2:
+                                        spawnAm = 1;
+                                        break;
+                                    case 3:
+                                        if (parts[2].includes("{"))
+                                        {
+                                            spawnData = parts[2];
+                                            spawnAm = 1;
+                                        }
+                                        else
+                                            spawnAm = parts[2];
+                                        break;
+                                    case 4:
+                                        spawnData = parts[2];
+                                        spawnAm = parts[3];
+                                        break;
+                                }
+
+                                const spawn = {
+                                    is_lineage: false,
+                                    amount: Number(spawnAm),
+                                    creature: spawnCret,
+                                    spawn_data: spawnData === null ? null : spawnData
+                                };
+
+                                const newSpawnFeature = {
+                                    type: "Feature",
+                                    properties: {
+                                        room: room,
+                                        den: parseInt(den),
+                                        spawns: [spawn]
+                                    }
+                                };
+                                var node = spawnToNode(newSpawnFeature, loadedDifficulty);
+                                newSpawnFeature["geometry"] = {
+                                    type: "Point",
+                                    coordinates: [node.geometry.coordinates[0], node.geometry.coordinates[1]]
+                                };
+
+                                var currSpawnFeature = nodeToSpawn(node, loadedDifficulty);
+                                if (!currSpawnFeature)
+                                {
+                                    regionJson[`${loadedDifficulty}-${region}`]["spawn_features"].push(newSpawnFeature);
+                                }
+                                else
+                                {
+                                    currSpawnFeature.properties.spawns.push(spawn);
+                                }
+                            }
+                        }
+                    }
+
+                    if (regionJson[`${loadedDifficulty}-${region}`]["spawn_features"].length > 0)
+                        drawSpawns(loadedDifficulty);
+                }
+            }
+            else
+            {
+                const files = Array.from(e.target.files);
+                uploadBtn.disabled = true;
+                for (const file of files) {
+                    const text = await readFileAsText(file);
+                    const world = file.name.split(".txt")[0].split("_")[0];
+                    var roomParts = file.name.split(".txt")[0].split("_");
+                    const room = roomParts[0] + "_" + roomParts[1];
+
+                    if (world.toLowerCase() == region.toLowerCase())
+                    {
+                        regionJson[`${loadedDifficulty}-${region}`]["placed_objects"] = regionJson[`${loadedDifficulty}-${region}`]["placed_objects"].filter(obj => obj.properties.room.toLowerCase() !== room.toLowerCase());
+
+                        const lines = text.split("\n").filter(l => l.length > 0 && l !== "[MERGE]" && l !== "[ENDMERGE]" && l !== "CREATURES" && l !== "END CREATURES" && !l.includes("REPLACE") && !l.includes("FIND") && !l.includes("ADD"));
+
+                        for (const line of lines)
+                        {
+                            if (line.startsWith("PlacedObjects: "))
+                            {
+                                const settingsStr = line.replace("PlacedObjects: ", "").trim();
+                                const objDataList = settingsStr.split(", ").filter(s => !s.includes("Filter"));
+                                var i = 0;
+                                for (const objDataStr of objDataList)
+                                {
+                                    const objData = fromRoomSettingsLine(objDataStr, room);
+                                    if (objData)
+                                    {
+                                        objData.id = objData.id + "_" + i++; // Timestamp not unique since objects mass added at once
+                                        const devPos = regionJson[`${loadedDifficulty}-${region}`]["room_devPos"].find(node => node.properties.room.toLowerCase() === room.toLowerCase());
+                                        var x = objData.position[0];
+                                        var y = objData.position[1];
+
+                                        regionJson[`${loadedDifficulty}-${region}`]["placed_objects"].push(objData.toGeoJSONFeature([x + devPos.geometry.coordinates[0], y + devPos.geometry.coordinates[1]]));
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
-
-                if (regionJson[`${loadedDifficulty}-${region}`]["spawn_features"].length > 0)
-                    drawSpawns(loadedDifficulty);
+                drawPlacedObjects(loadedDifficulty);
             }
 
             uploadBtn.disabled = false;
@@ -2634,7 +2858,7 @@
                 const item = document.createElement('div');
                 item.className = 'placed-object-menu-item';
                 item.innerHTML = `
-                    <img src="./resources/icons/${objectType}.png" />
+                    <img src="./resources/icons/${objectTypeToImage(objectType)}.png" />
                     ${objectType}
                 `;
                 item.addEventListener('click', (e) => {
