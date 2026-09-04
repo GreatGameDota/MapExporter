@@ -1973,8 +1973,11 @@
             var region_url = region.toUpperCase();
             var roompath = `./slugcats/${region_url}/${pdifficulty}`;
             getJsonObject(`${roompath}/region.json`, function (json) {
-                regionJson[`${pdifficulty}-${region}`] = JSON.parse(JSON.stringify(json));
-                originalRegionJson[`${pdifficulty}-${region}`] = JSON.parse(JSON.stringify(json));
+                if (!regionJson[`${pdifficulty}-${region}`])
+                {
+                    regionJson[`${pdifficulty}-${region}`] = JSON.parse(JSON.stringify(json));
+                    originalRegionJson[`${pdifficulty}-${region}`] = JSON.parse(JSON.stringify(json));
+                }
 
                 if (!regionJson[`${pdifficulty}-${region}`]["placed_objects"]) {
                     regionJson[`${pdifficulty}-${region}`]["placed_objects"] = [];
