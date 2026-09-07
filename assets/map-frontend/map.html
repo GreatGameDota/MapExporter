@@ -1426,6 +1426,7 @@
                 const objectType = placedObjectFields.querySelector('.f-object-type').value.trim();
                 const roomName = placedObjectFields.querySelector('.f-object-room').value.trim();
                 const position = [Number(placedObjectFields.querySelector('.f-object-x').value), Number(placedObjectFields.querySelector('.f-object-y').value)];
+                const devPos = regionJson[`${loadedDifficulty}-${region}`]["room_devPos"].find(node => node.properties.room.toLowerCase() === roomName.toLowerCase());
                 const properties = {
                     object: objectType,
                     room: roomName,
@@ -1437,10 +1438,10 @@
                 if (currentPlacedObject)
                 {
                     feature = currentPlacedObject;
+                    feature.geometry.coordinates = [position[0] + devPos.geometry.coordinates[0], position[1] + devPos.geometry.coordinates[1]];
                 }
                 else
                 {
-                    const devPos = regionJson[`${loadedDifficulty}-${region}`]["room_devPos"].find(node => node.properties.room.toLowerCase() === roomName.toLowerCase());
                     const placedObj = new PlacedObjectData(objectType, position, roomName);
                     feature = placedObj.toGeoJSONFeature([position[0] + devPos.geometry.coordinates[0], position[1] + devPos.geometry.coordinates[1]]);
                 }
