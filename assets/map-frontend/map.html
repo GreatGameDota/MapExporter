@@ -484,6 +484,20 @@
             background-color: #333333;
         }
 
+        .placed-object-menu-add {
+            grid-column: 1 / -1;
+            padding: 8px;
+            cursor: pointer;
+            background-color: #0c0c0c;
+            color: #cccccc;
+            border-radius: 8px;
+            border: 2px solid #A9A4B2;
+        }
+
+        .placed-object-menu-add:hover {
+            background-color: #444444;
+        }
+
         .placed-object-image {
             position: absolute;
             right: -20px;
@@ -519,6 +533,10 @@
 
         .lineage-row {
             margin-bottom: 4px;
+            justify-content: space-between;
+            align-items: center;
+            display: flex;
+            gap: 8px;
         }
 
         .lineage-box {
@@ -551,6 +569,7 @@
             <button class="modal-close" id="modalClose">&times;</button>
             <h2 id="modalTitle"></h2>
 
+            <div id="placedObjectFields" class="hidden"></div>
             <div id="spawnCards"></div>
             <button class="rw-ui rw-text" id="addSpawnBtn" style="color: #cccccc;background-color:#0c0c0c;margin-top: 10px;">+ Add spawn</button>
 
@@ -561,7 +580,7 @@
         </div>
     </div>
 
-    <div class="placed-object-menu" id="placedObjectMenu"></div>
+    <div class="placed-object-menu rw-text" id="placedObjectMenu"></div>
 
     <div class="side-panel left-panel rw-text collapsible collapsed">
         <div style="padding-left: 8px; padding-bottom: 8px;">
@@ -707,8 +726,16 @@
                 };
             }
 
-            toRoomSettingsString(difficulty, filterList) {
-                return objectMap[this.objectType](filterList, this.position);
+            toRoomSettingsString(difficulty, filterList, info) {
+                let settingsString;
+                if (objectMap[this.objectType]) {
+                    const objectParts = objectMap[this.objectType](filterList, this.position).split('><');
+                    objectParts[3] = `${info}, Filter`;
+                    settingsString = objectParts.join('><');
+                } else {
+                    settingsString = `${this.objectType}><${this.position[0]}><${this.position[1]}><${info}, Filter><${this.position[0]}><${this.position[1]}><10~0~2~3~${filterList.join('|')}, `;
+                }
+                return settingsString;
             }
         }
 
@@ -965,10 +992,13 @@
 
         var selectedRoom;
         var selectedCoords;
+        var selectedPosition;
 
         function showPlacedObjectMenu(e) {
             selectedRoom = e.target.feature.properties.name;
             selectedCoords = e.latlng;
+            const devPos = regionJson[`${loadedDifficulty}-${region}`]["room_devPos"].find(node => node.properties.room.toLowerCase() === selectedRoom.toLowerCase());
+            selectedPosition = devPos ? [selectedCoords.lng - devPos.geometry.coordinates[0], selectedCoords.lat - devPos.geometry.coordinates[1]] : [0, 0];
 
             const menu = document.getElementById('placedObjectMenu');
             menu.style.left = e.originalEvent.pageX + 'px';
@@ -987,14 +1017,15 @@
 
             if (!devPos) return;
 
-            const placedObj = new PlacedObjectData(objectType, [selectedCoords.lng - devPos.geometry.coordinates[0], selectedCoords.lat - devPos.geometry.coordinates[1]], selectedRoom);
-            const feature = placedObj.toGeoJSONFeature([selectedCoords.lng, selectedCoords.lat]);
-
-            regionJson[`${loadedDifficulty}-${region}`]["placed_objects"].push(feature);
-            drawPlacedObjects(loadedDifficulty);
-
             const menu = document.getElementById('placedObjectMenu');
             menu.classList.remove('open');
+
+            openPlacedObjectModal({
+                objectType,
+                position: [selectedCoords.lng - devPos.geometry.coordinates[0], selectedCoords.lat - devPos.geometry.coordinates[1]],
+                room: selectedRoom,
+                absoluteCoordinates: [selectedCoords.lng, selectedCoords.lat]
+            });
         }
 
         function openModal(e) {
@@ -1121,7 +1152,7 @@
                 "rottenseedcob": "RottenSeedCob"
             };
 
-            return displayNames[objectType];
+            return displayNames[objectType] ?? objectType;
         }
 
         function drawPlacedObjects(pdifficulty) {
@@ -1151,6 +1182,11 @@
                         html: objhtml,
                     }),
                     interactive: true,
+                });
+
+                marker.on('click', function (e) {
+                    e.originalEvent.stopPropagation();
+                    openPlacedObjectModal({ feature });
                 });
 
                 marker.on('add', function() {
@@ -1185,7 +1221,7 @@
             }
 
             if (hadPlacedObjects) placedObjectsMarkerLayer.addTo(map);
-            overlays.addOverlay(placedObjectsMarkerLayer, "Placed Objects");
+            overlays.addOverlay(placedObjectsMarkerLayer, "C. Placed Objects");
         }
 
         // Map
@@ -1229,7 +1265,7 @@
         // MODAL
         const overlay = document.getElementById('modalOverlay');
         const modalTitle = document.getElementById('modalTitle');
-        const propRows = document.getElementById('propRows');
+        const placedObjectFields = document.getElementById('placedObjectFields');
         const spawnCards = document.getElementById('spawnCards');
         const addSpawnBtn = document.getElementById('addSpawnBtn');
         const saveBtn = document.getElementById('saveBtn');
@@ -1237,6 +1273,48 @@
         const modalClose = document.getElementById('modalClose');
 
         let currentNode = null;
+        let currentPlacedObject = null;
+
+        function placedObjectDefaultSettings(objectType, position) {
+            if (!objectMap[objectType]) return '';
+            const output = objectMap[objectType]([], position);
+            return output.split('><')[3]?.split(',')[0]?.trim() ?? '';
+        }
+
+        function openPlacedObjectModal(data) {
+            currentNode = null;
+            currentPlacedObject = data.feature || null;
+            const properties = data.feature?.properties || {};
+            const objectType = properties.object || data.objectType || '';
+            const position = properties.position || data.position || [0, 0];
+            const room = properties.room || data.room || selectedRoom || '';
+            const info = properties.info || placedObjectDefaultSettings(objectType, position);
+
+            modalTitle.textContent = 'Placed Object';
+            placedObjectFields.innerHTML = `
+                <div class="spawn-card">
+                    <div style="display:flex;flex-direction:row;margin-bottom:8px;gap:8px;justify-content:space-between;align-items:center;">
+                        <label>Object type</label>
+                        <input type="text" class="f-object-type rw-text input-field" value="${objectTypeToDisplayName(objectType)}" placeholder="CustomObject" />
+                    </div>
+                    <div style="display:flex;flex-direction:row;margin-bottom:8px;gap:8px;justify-content:space-between;align-items:center;">
+                        <label>Room</label>
+                        <input type="text" class="f-object-room rw-text input-field" value="${room}" />
+                    </div>
+                    <div style="display:flex;flex-direction:row;margin-bottom:8px;gap:8px;justify-content:space-between;align-items:center;">
+                        <label>X</label>
+                        <input type="number" class="f-object-x rw-text input-field" value="${position[0]}" />
+                        <label>Y</label>
+                        <input type="number" class="f-object-y rw-text input-field" value="${position[1]}" />
+                    </div>
+                    <label style="display:block;margin-bottom:8px;">Object data</label>
+                    <textarea class="f-object-info rw-text input-field" rows="5" placeholder="1~2~3" style="width:100%;box-sizing:border-box;">${info}</textarea>
+                </div>`;
+            placedObjectFields.classList.remove('hidden');
+            spawnCards.classList.add('hidden');
+            addSpawnBtn.classList.add('hidden');
+            overlay.classList.add('open');
+        }
 
         function addSpawnCard(spawn = {}) {
             const card = document.createElement('div');
@@ -1253,15 +1331,15 @@
                     <button type="button" class="remove-spawn rw-ui" title="Remove spawn" style="color: #cccccc;background-color:#0c0c0c;width:fit-content;padding:4px 8px;margin-left:auto;">&times;</button>
                 </div>
                 <div>
-                    <div style="display:flex;flex-direction:row;margin-bottom:8px;padding:0 4px;gap:8px;">
+                    <div style="display:flex;flex-direction:row;margin-bottom:8px;padding:0 4px;gap:8px;justify-content:space-between;align-items:center;">
                         <label>Creature</label>
                         <input type="text" class="f-creature rw-text input-field" value="${spawn.creature ?? ''}" placeholder="Snail" />
                     </div>
-                    <div style="display:flex;flex-direction:row;margin-bottom:8px;padding:0 4px;gap:8px;">
+                    <div style="display:flex;flex-direction:row;margin-bottom:8px;padding:0 4px;gap:8px;justify-content:space-between;align-items:center;">
                         <label>Amount</label>
                         <input type="number" class="f-amount rw-text input-field" value="${spawn.amount ?? 1}" min="0" />
                     </div>
-                    <div style="display:flex;flex-direction:row;margin-bottom:8px;padding:0 4px;gap:8px;">
+                    <div style="display:flex;flex-direction:row;margin-bottom:8px;padding:0 4px;gap:8px;justify-content:space-between;align-items:center;">
                         <label>Spawn data</label>
                         <input type="text" class="f-spawn-data rw-text input-field" value="${spawn.spawn_data ?? ''}" placeholder="{PreCycle|Seed:123}" />
                     </div>
@@ -1290,7 +1368,7 @@
                 const row = document.createElement('div');
                 row.className = 'lineage-row';
                 row.innerHTML = `
-                    <input type="text" class="l-creature rw-text input-field" value="${creature}" placeholder="creature" />
+                    <input type="text" class="l-creature rw-text input-field" value="${creature}" placeholder="Creature" />
                     <input type="text" class="l-prob rw-text input-field" value="${prob}" placeholder="0.0000" />
                     <input type="text" class="l-data rw-text input-field" value="${dataVal ?? ''}" placeholder="{PreCycle|Seed:123}" />
                     <button type="button" class="remove-lineage-row rw-ui" title="Remove" style="color: #cccccc;background-color:#0c0c0c;width:fit-content;margin:auto;padding:4px 8px;">&times;</button>
@@ -1319,6 +1397,7 @@
         }
 
         function _openModal(data) {
+            closeModal();
             modalTitle.textContent = data.properties.name;
 
             spawnCards.innerHTML = '';
@@ -1331,6 +1410,10 @@
         function closeModal() {
             overlay.classList.remove('open');
             currentNode = null;
+            currentPlacedObject = null;
+            placedObjectFields.classList.add('hidden');
+            spawnCards.classList.remove('hidden');
+            addSpawnBtn.classList.remove('hidden');
         }
 
         addSpawnBtn.addEventListener('click', addSpawnCard);
@@ -1339,6 +1422,41 @@
         overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
 
         saveBtn.addEventListener('click', () => {
+            if (!placedObjectFields.classList.contains('hidden')) {
+                const objectType = placedObjectFields.querySelector('.f-object-type').value.trim();
+                const roomName = placedObjectFields.querySelector('.f-object-room').value.trim();
+                const position = [Number(placedObjectFields.querySelector('.f-object-x').value), Number(placedObjectFields.querySelector('.f-object-y').value)];
+                const properties = {
+                    object: objectType,
+                    room: roomName,
+                    position,
+                    info: placedObjectFields.querySelector('.f-object-info').value.trim()
+                };
+
+                var feature = null;
+                if (currentPlacedObject)
+                {
+                    feature = currentPlacedObject;
+                }
+                else
+                {
+                    const devPos = regionJson[`${loadedDifficulty}-${region}`]["room_devPos"].find(node => node.properties.room.toLowerCase() === roomName.toLowerCase());
+                    const placedObj = new PlacedObjectData(objectType, position, roomName);
+                    feature = placedObj.toGeoJSONFeature([position[0] + devPos.geometry.coordinates[0], position[1] + devPos.geometry.coordinates[1]]);
+                }
+
+                feature.properties = { ...feature.properties, ...properties };
+                if (!currentPlacedObject)
+                {
+                    const placedObjects = regionJson[`${loadedDifficulty}-${region}`]["placed_objects"];
+                    placedObjects.push(feature);
+                }
+
+                drawPlacedObjects(loadedDifficulty);
+                closeModal();
+                return;
+            }
+
             const spawns = [];
             spawnCards.querySelectorAll('.spawn-card').forEach((card) => {
                 const isLineage = card.querySelector('.f-is-lineage').checked;
@@ -1544,7 +1662,7 @@
                 for (var placedObj of regionJson[`${loadedDifficulty}-${region}`]["placed_objects"]) {
                     const objData = new PlacedObjectData(placedObj.properties.object, placedObj.properties.position, placedObj.properties.room);
                     const roomKey = placedObj.properties.room.toLowerCase();
-                    const settingsStr = objData.toRoomSettingsString(loadedDifficulty, filterList);
+                    const settingsStr = objData.toRoomSettingsString(loadedDifficulty, filterList, placedObj.properties.info);
 
                     if (!roomSettingsMap[roomKey]) {
                         roomSettingsMap[roomKey] = `PlacedObjects: ${settingsStr}`;
@@ -2896,12 +3014,24 @@
             const menu = document.getElementById('placedObjectMenu');
             menu.innerHTML = '';
 
+            const genericItem = document.createElement('button');
+            genericItem.type = 'button';
+            genericItem.className = 'placed-object-menu-add';
+            genericItem.textContent = '+ Add generic placed object';
+            genericItem.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                menu.classList.remove('open');
+                openPlacedObjectModal({ room: selectedRoom, position: selectedPosition || [0, 0], absoluteCoordinates: selectedCoords });
+            });
+            menu.appendChild(genericItem);
+
             for (const objectType of PLACED_OBJECT_TYPES) {
                 const item = document.createElement('div');
                 item.className = 'placed-object-menu-item';
                 item.innerHTML = `
                     <img src="./resources/icons/${objectTypeToImage(objectType)}.png" />
-                    ${objectType}
+                    ${objectTypeToDisplayName(objectType)}
                 `;
                 item.addEventListener('click', (e) => {
                     e.preventDefault();
