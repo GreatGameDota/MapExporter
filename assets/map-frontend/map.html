@@ -1172,7 +1172,7 @@
                 
                 let objhtml = `
                     <div>
-                        <img class="placed-object-image" src="./resources/icons/${objectTypeToImage(objectType)}.png"/>
+                        <img class="placed-object-image" src="./resources/icons/${objectTypeToImage(objectType.toLowerCase())}.png"/>
                         <button class="delete-object-btn" data-id="${id}" title="Delete object">x</button>
                     </div>`;
 
