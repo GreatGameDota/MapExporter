@@ -746,7 +746,7 @@
             if (parts.length < 3) return null;
             const [objectType, xStr, yStr, rawInfo] = parts;
             const info = rawInfo.split(", Filter")[0].trim();
-            return new PlacedObjectData(objectType.toLowerCase(), [parseFloat(xStr), parseFloat(yStr)], room, info);
+            return new PlacedObjectData(objectType, [parseFloat(xStr), parseFloat(yStr)], room, info);
         }
 
         // Dynamic navigation
