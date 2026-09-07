@@ -1,0 +1,3076 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Rain World Map</title>
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+
+    <meta property="og:image" content="https://alduris.github.io/mod-map/embed.jpg" />
+    <meta property="og:type" content="object" />
+    <meta property="og:title" content="Rain World Map" />
+    <meta property="og:url" content="https://alduris.github.io/mod-map/" />
+    <meta property="og:description" content="A custom, online interactive map for regions, vanilla or modded, in Rain World." />
+    <link rel="stylesheet" href="./rw.css" />
+    <link rel="stylesheet" href="./leaflet/leaflet.css" />
+
+    <script src="./global.js"></script>
+    <script src="./leaflet/leaflet.js"></script>
+    <script src="./beziero.js"></script>
+    <script src="./jszip.min.js"></script>
+
+    <style id="mapstyle">
+        body,
+        html {
+            height: 100%;
+            padding: 0;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        #mapid {
+            height: 100%;
+            padding: 0;
+            margin: 0;
+            background: black;
+        }
+
+        .room-labels {
+            opacity: 0.4;
+            pointer-events: auto;
+            padding-top: 3px;
+            padding-bottom: 3px;
+            color: white;
+            background-color: black;
+            border: none;
+        }
+
+        .spawn-divs {
+            display: flex;
+            justify-content: center;
+        }
+
+        .spawn-entry {
+            display: none;
+            /* to be overwritten */
+            margin-left: 16px;
+            margin-right: 16px;
+        }
+
+        .lineage-entry {
+            height: 24px;
+        }
+        .lineage-entry.tall {
+            height: 30px;
+        }
+
+        .roomtag-divs {
+            display: flex;
+            justify-content: center;
+        }
+
+        .object-divs {
+            display: flex;
+            justify-content: center;
+        }
+
+        .object-entry {
+            margin-left: 16px;
+            margin-right: 16px;
+        }
+
+        .object-label {
+            position: absolute;
+            margin-left: 0px;
+            margin-top: -5px;
+            font-weight: 900;
+            font-size: 125%;
+            color: white;
+            -webkit-text-fill-color: white;
+            /* Will override color (regardless of order) */
+            -webkit-text-stroke-width: 1px;
+            -webkit-text-stroke-color: black;
+        }
+
+        .object-tooltip {
+            position: absolute;
+            margin-left: 0px;
+            margin-top: 0px;
+            font-weight: 900;
+            font-size: 125%;
+            color: white;
+            -webkit-text-fill-color: white;
+            /* Will override color (regardless of order) */
+            -webkit-text-stroke-width: 1px;
+            -webkit-text-stroke-color: black;
+        }
+
+        .object-image {
+            position: absolute;
+            margin-left: -25px;
+            margin-top: -25px;
+        }
+
+        .rse-image {
+            position: absolute;
+            margin-left: -25px;
+            margin-top: -25px;
+        }
+
+        .roomtag-entry {
+            display: none;
+            /* to be overwritten */
+            margin-left: 16px;
+            margin-right: 16px;
+        }
+
+        .roomtag-label {
+            position: absolute;
+            margin-left: 0px;
+            margin-top: 10px;
+            font-weight: 700;
+            font-size: 125%;
+            color: white;
+            -webkit-text-fill-color: white;
+            /* Will override color (regardless of order) */
+            -webkit-text-stroke-width: 1px;
+            -webkit-text-stroke-color: black;
+            font-family: var(--font-body);
+        }
+
+        .roomtag-image {
+            position: absolute;
+            margin-left: -45px;
+            margin-top: 0px;
+        }
+
+        .warppoint-image {
+            position: absolute;
+            transform: translate(-50%, -50%) scale(0.5);
+            border: 4px solid white;
+            border-radius: 50%;
+        }
+
+        .warpdest-circle {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            width: 12px;
+            height: 12px;
+            background-color: #5b4fde;
+            border: 2px solid white;
+            border-radius: 50%;
+        }
+        .warpdest-circle.badwarp {
+            background-color: #5f1cd4;
+        }
+
+        .warpdest-label {
+            position: absolute;
+            margin-left: 0px;
+            /* margin-top: -5px; */
+            font-weight: 900;
+            font-size: 112.5%;
+            color: white;
+            -webkit-text-fill-color: white;
+            /* Will override color (regardless of order) */
+            -webkit-text-stroke-width: 1px;
+            -webkit-text-stroke-color: black;
+            pointer-events: none;
+        }
+
+        .icon-image {
+            position: absolute;
+            margin-left: -25px;
+            margin-top: -25px;
+        }
+
+        .icon-label {
+            position: absolute;
+            font-weight: 900;
+            font-size: 100%;
+            color: white;
+            -webkit-text-fill-color: white;
+            /* Will override color (regardless of order) */
+            -webkit-text-stroke-width: 1px;
+            -webkit-text-stroke-color: black;
+        }
+
+        .icon-tooltip {
+            position: absolute;
+            margin-left: 0px;
+            margin-top: -16px;
+            font-weight: 900;
+            font-size: 125%;
+            color: white;
+            -webkit-text-fill-color: white;
+            /* Will override color (regardless of order) */
+            -webkit-text-stroke-width: 1px;
+            -webkit-text-stroke-color: black;
+        }
+
+        .overlay-label {
+            position: relative;
+            width: 160px;
+            height: 36px;
+            margin-top: 11px;
+            margin-bottom: 11px;
+        }
+
+        /* UI stuff */
+        .side-panel {
+            position: absolute;
+            top: 24px;
+            max-height: calc(100vh - 54px);
+            display: flex;
+            flex-direction: column;
+            padding: 8px;
+            background: #0c0c0c;
+            z-index: 1000;
+            color: #cccccc;
+        }
+
+        /* Difficulty select and layers panel */
+        .right-panel {
+            right: 24px;
+        }
+
+        .difficulty-select {
+            padding-bottom: 6px;
+            width: 150px;
+            position: relative;
+            /* re-center after wrap */
+            margin-left: auto;
+            margin-right: auto;
+            padding: 4px;
+            transition: width 0.4s;
+        }
+
+        .difficulty-btn {
+            display: inline-block;
+            width: 38px;
+            height: 38px;
+            margin: 4px;
+            position: relative;
+        }
+
+        #layer-content {
+            padding: 8px;
+        }
+
+        .left-panel {
+            left: 24px;
+        }
+
+        .region-btn {
+            font-size: 0.8rem;
+            width: 240px;
+            height: 24px;
+            position: relative;
+        }
+        .region-btn:not(details > .region-btn) {
+            margin-top: 8px;
+            margin-bottom: 8px;
+        }
+
+        details.rw-ui {
+            border-radius: 8px;
+            border: 2px solid #686672;
+            margin-top: 8px;
+            margin-bottom: 8px;
+        }
+        details.rw-ui > summary {
+            background: #686672;
+            color: black;
+            padding: 4px 8px;
+            font-family: var(--font-body);
+            font-weight: 600;
+            user-select: none;
+        }
+        .region-sublist {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 8px;
+            padding: 6px;
+        }
+
+        a {
+            color: #999;
+        }
+
+        input[type='radio'].rw-ui + span {
+            top: calc(50% - 10px);
+            /* proof that CSS is stupid, cant fucking vertical center text */
+        }
+
+        #region-select {
+            padding-left: 8px;
+            padding-right: 8px;
+        }
+
+        .scroll-ish {
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 24px !important;
+            margin-right: -16px !important;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .collapse-tab {
+            display: none;
+            width: 30px;
+            height: 30px;
+            user-select: none;
+            background: #0c0c0c;
+            background-image: url(./resources/hamburger.png);
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        @media screen and (max-width: 640px) {
+            .overlay-label {
+                height: 28px;
+            }
+            input[type="checkbox"].rw-ui + span {
+                top: calc(50% - 10px);
+            }
+        }
+
+        @media (max-width: 899px) {
+            .side-panel {
+                transition: left ease 0.3s, right ease 0.3s;
+            }
+            .collapse-tab {
+                display: block;
+                cursor: pointer;
+            }
+
+            .left-panel.collapsed {
+                left: var(--hide-pos);
+            }
+
+            .right-panel.collapsed {
+                right: var(--hide-pos);
+            }
+
+            .left-panel .collapse-tab {
+                position: absolute;
+                right: -30px;
+                border-top-right-radius: 4px;
+                border-bottom-right-radius: 4px;
+            }
+
+            .right-panel .collapse-tab {
+                position: absolute;
+                left: -30px;
+                border-top-left-radius: 4px;
+                border-bottom-left-radius: 4px;
+            }
+
+            .collapsed .scroll-ish {
+                overflow-y: hidden;
+            }
+        }
+    </style>
+
+
+    <style id="spawnfilters">
+        .spawn-filter {
+            display: initial
+        }
+
+        .object-filter {
+            display: initial
+        }
+
+        .roomtag-filter {
+            display: initial
+        }
+
+        .warppoint-filter {
+            display: initial
+        }
+
+        .warpdest-filter {
+            display: initial
+        }
+
+        .rse-filter {
+            display: initial
+        }
+    </style>
+
+    <style id="hoverlabels">
+        .hover-label {
+            display: none;
+        }
+    </style>
+
+    <style>
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal-box {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px 24px;
+            min-width: 280px;
+            max-width: 90vw;
+            max-height: 90vh;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+            position: relative;
+            background-color: #0c0c0c;
+            color: #cccccc;
+            overflow-y: auto;
+            border: 2px solid #A9A4B2;
+            border-radius: 8px;
+        }
+        .modal-box h2 {
+            margin: 0 0 10px;
+            font-size: 18px;
+        }
+        .modal-close {
+            position: absolute;
+            top: 10px;
+            right: 14px;
+            cursor: pointer;
+            font-size: 20px;
+            color: #888;
+            background: none;
+            border: none;
+            line-height: 1;
+        }
+        .modal-close:hover { color: #444; }
+
+        .placed-object-menu {
+            position: fixed;
+            display: none;
+            background: #0c0c0c;
+            z-index: 1000;
+            max-height: 25vh;
+            overflow-y: auto;
+            min-width: 15vw;
+        }
+
+        .placed-object-menu.open {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 4px;
+            padding: 8px;
+        }
+
+        .placed-object-menu-item {
+            padding: 8px 4px;
+            cursor: pointer;
+            color: white;
+            justify-items: center;
+            align-items: center;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .placed-object-menu-item:hover {
+            background-color: #333333;
+        }
+
+        .placed-object-menu-add {
+            grid-column: 1 / -1;
+            padding: 8px;
+            cursor: pointer;
+            background-color: #0c0c0c;
+            color: #cccccc;
+            border-radius: 8px;
+            border: 2px solid #A9A4B2;
+        }
+
+        .placed-object-menu-add:hover {
+            background-color: #444444;
+        }
+
+        .placed-object-image {
+            position: absolute;
+            right: -20px;
+            top: -20px;
+        }
+
+        .delete-object-btn {
+            position: absolute;
+            right: -25px;
+            top: 15px;
+            width: 20px;
+            height: 20px;
+            padding: 0;
+            border: none;
+            border-radius: 50%;
+            background-color: rgba(255, 50, 50, 0.8);
+            color: white;
+            cursor: pointer;
+            z-index: 1000;
+            transition: background-color 0.2s;
+        }
+
+        .delete-object-btn:hover {
+            background-color: rgba(255, 100, 100, 1);
+        }
+
+        .input-field {
+            background-color: #0c0c0c;
+            color: #cccccc;
+            border-radius: 8px;
+            border: 2px solid #A9A4B2;
+        }
+
+        .lineage-row {
+            margin-bottom: 4px;
+            justify-content: space-between;
+            align-items: center;
+            display: flex;
+            gap: 8px;
+        }
+
+        .lineage-box {
+            margin-top: 8px;
+            padding: 4px;
+            border-radius: 8px;
+            border: 2px solid #a9a4b270;
+        }
+
+        .spawn-card {
+            margin-bottom: 8px;
+            padding: 4px;
+            border-radius: 8px;
+            border: 2px solid #a9a4b270;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="mapid"></div>
+
+    <div style="position: absolute;bottom: 50px;left: 50px;z-index: 1000;">
+        <button class="rw-text rw-ui" id="exportBtn" style="margin-bottom: 10px;color: #cccccc;background-color:#0c0c0c">EXPORT</button>
+        <button class="rw-text rw-ui" id="uploadBtn" style="color: #cccccc;background-color:#0c0c0c">IMPORT .txt</button>
+        <input type="file" id="fileInput" accept=".txt" multiple style="display:none" />
+    </div>
+
+    <div class="modal-overlay rw-text" id="modalOverlay">
+        <div class="modal-box">
+            <button class="modal-close" id="modalClose">&times;</button>
+            <h2 id="modalTitle"></h2>
+
+            <div id="placedObjectFields" class="hidden"></div>
+            <div id="spawnCards"></div>
+            <button class="rw-ui rw-text" id="addSpawnBtn" style="color: #cccccc;background-color:#0c0c0c;margin-top: 10px;">+ Add spawn</button>
+
+            <div style="display: flex; justify-content: space-between; margin-top: 16px;">
+                <button class="rw-ui rw-text" id="saveBtn" style="color: #cccccc;background-color:#0c0c0c;margin-right: 10px;">Save</button>
+                <button class="rw-ui rw-text" id="cancelBtn" style="color: #cccccc;background-color:#0c0c0c">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="placed-object-menu rw-text" id="placedObjectMenu"></div>
+
+    <div class="side-panel left-panel rw-text collapsible collapsed">
+        <div style="padding-left: 8px; padding-bottom: 8px;">
+            <a href="./" class="rw-text">&lt; Back to Index</a>
+            <hr />
+            <span>Regions</span>
+        </div>
+
+        <form name="regionselect" id="region-select" class="scroll-ish"></form>
+
+        <div class="collapse-tab"></div>
+    </div>
+
+    <div class="side-panel right-panel rw-text collapsible collapsed">
+        <div>Slugcat</div>
+        <form name="difficulty" class="difficulty-select" id="scug-selector">
+        </form>
+
+        <div>Layers</div>
+        <div id="layer-content" class="scroll-ish"></div>
+
+        <div class="collapse-tab"></div>
+    </div>
+
+    <script>
+        'use strict';
+        var loadedCount = 1;
+
+        const PLACED_OBJECT_TYPES = [
+            'ripplespawnegg', 'flarebomb', 'puffball', 'danglefruit', 'datapearl', 'seedcob', 'waternut',
+            'karmaflower', 'mushroom', 'slimemold', 'flylure', 'firecrackerplant', 'reliablespear',
+            'sporeplant', 'needleegg', 'bubblegrass', 'jellyfish', 'vulturegrub', 'deadvulturegrub',
+            'hazer', 'deadhazer', 'rattler', 'bigjellyfish', 'stowaway', 'placedboxworm',
+            'placedfiresprite', 'placeddrillcrab', 'placedrats', 'placedfrog', 'placedloach',
+            'placedrotloach', 'placedbarnacles', 'lantern', 'graffitibomb', 'gooieduck', 'lillypuck',
+            'glowweed', 'dandelionpeach', 'rottendanglefruit', 'rottenseedcob'
+        ];
+
+        const objectMap = {};
+        // ripplespawnegg
+        objectMap[PLACED_OBJECT_TYPES[0]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[0])}><${position[0]}><${position[1]}><, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // flarebomb
+        objectMap[PLACED_OBJECT_TYPES[1]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[1])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // puffball
+        objectMap[PLACED_OBJECT_TYPES[2]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[2])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // danglefruit
+        objectMap[PLACED_OBJECT_TYPES[3]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[3])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // datapearl
+        objectMap[PLACED_OBJECT_TYPES[4]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[4])}><${position[0]}><${position[1]}><0~0~0~0~Misc~0, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // seedcob
+        objectMap[PLACED_OBJECT_TYPES[5]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[5])}><${position[0]}><${position[1]}><0~0~7~10, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // waternut
+        objectMap[PLACED_OBJECT_TYPES[6]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[6])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // karmaflower
+        objectMap[PLACED_OBJECT_TYPES[7]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[7])}><${position[0]}><${position[1]}><0~0~5~7, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // mushroom
+        objectMap[PLACED_OBJECT_TYPES[8]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[8])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // slimemold
+        objectMap[PLACED_OBJECT_TYPES[9]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[9])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // flylure
+        objectMap[PLACED_OBJECT_TYPES[10]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[10])}><${position[0]}><${position[1]}><0~0~4~9, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // firecrackerplant
+        objectMap[PLACED_OBJECT_TYPES[11]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[11])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // reliablespear
+        objectMap[PLACED_OBJECT_TYPES[12]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[12])}><${position[0]}><${position[1]}><, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // sporeplant
+        objectMap[PLACED_OBJECT_TYPES[13]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[13])}><${position[0]}><${position[1]}><0~0~7~10, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // needleegg
+        objectMap[PLACED_OBJECT_TYPES[14]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[14])}><${position[0]}><${position[1]}><0~0~4~9, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // bubblegrass
+        objectMap[PLACED_OBJECT_TYPES[15]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[15])}><${position[0]}><${position[1]}><0~0~4~9, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // jellyfish
+        objectMap[PLACED_OBJECT_TYPES[16]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[16])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // vulturegrub
+        objectMap[PLACED_OBJECT_TYPES[17]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[17])}><${position[0]}><${position[1]}><0~0~7~10, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // deadvulturegrub
+        objectMap[PLACED_OBJECT_TYPES[18]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[18])}><${position[0]}><${position[1]}><0~0~7~10, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // hazer
+        objectMap[PLACED_OBJECT_TYPES[19]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[19])}><${position[0]}><${position[1]}><0~0~7~10, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // deadhazer
+        objectMap[PLACED_OBJECT_TYPES[20]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[20])}><${position[0]}><${position[1]}><0~0~7~10, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // rattler
+        objectMap[PLACED_OBJECT_TYPES[21]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[21])}><${position[0]}><${position[1]}><, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // bigjellyfish
+        objectMap[PLACED_OBJECT_TYPES[22]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[22])}><${position[0]}><${position[1]}><0~100, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // stowaway
+        objectMap[PLACED_OBJECT_TYPES[23]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[23])}><${position[0]}><${position[1]}><0~100, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // placedboxworm
+        objectMap[PLACED_OBJECT_TYPES[24]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[24])}><${position[0]}><${position[1]}><, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // placedfiresprite
+        objectMap[PLACED_OBJECT_TYPES[25]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[25])}><${position[0]}><${position[1]}><, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // placeddrillcrab
+        objectMap[PLACED_OBJECT_TYPES[26]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[26])}><${position[0]}><${position[1]}><, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // placedrats
+        objectMap[PLACED_OBJECT_TYPES[27]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[27])}><${position[0]}><${position[1]}><, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // placedfrog
+        objectMap[PLACED_OBJECT_TYPES[28]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[28])}><${position[0]}><${position[1]}><, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // placedloach
+        objectMap[PLACED_OBJECT_TYPES[29]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[29])}><${position[0]}><${position[1]}><, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // placedrotloach
+        objectMap[PLACED_OBJECT_TYPES[30]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[30])}><${position[0]}><${position[1]}><, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // placedbarnacles
+        objectMap[PLACED_OBJECT_TYPES[31]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[31])}><${position[0]}><${position[1]}><, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // lantern
+        objectMap[PLACED_OBJECT_TYPES[32]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[32])}><${position[0]}><${position[1]}><0~0~4~9, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // graffitibomb
+        objectMap[PLACED_OBJECT_TYPES[33]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[33])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // gooieduck
+        objectMap[PLACED_OBJECT_TYPES[34]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[34])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // lillypuck
+        objectMap[PLACED_OBJECT_TYPES[35]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[35])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // glowweed
+        objectMap[PLACED_OBJECT_TYPES[36]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[36])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // dandelionpeach
+        objectMap[PLACED_OBJECT_TYPES[37]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[37])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // rottendanglefruit
+        objectMap[PLACED_OBJECT_TYPES[38]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[38])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // rottenseedcob
+        objectMap[PLACED_OBJECT_TYPES[39]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[39])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+
+        class PlacedObjectData {
+            constructor(objectType, position, room, info = '') {
+                this.type = 'Feature';
+                this.objectType = objectType;
+                this.position = position;
+                this.room = room;
+                this.info = info;
+                this.id = room + '_' + new Date().toISOString();
+            }
+
+            toGeoJSONFeature(absoluteCoordinates) {
+                return {
+                    type: 'Feature',
+                    properties: {
+                        object: this.objectType,
+                        id: this.id,
+                        room: this.room,
+                        info: this.info,
+                        position: this.position
+                    },
+                    geometry: {
+                        type: 'Point',
+                        coordinates: absoluteCoordinates
+                    }
+                };
+            }
+
+            toRoomSettingsString(difficulty, filterList, info) {
+                let settingsString;
+                if (objectMap[this.objectType]) {
+                    const objectParts = objectMap[this.objectType](filterList, this.position).split('><');
+                    objectParts[3] = `${info}, Filter`;
+                    settingsString = objectParts.join('><');
+                } else {
+                    settingsString = `${this.objectType}><${this.position[0]}><${this.position[1]}><${info}, Filter><${this.position[0]}><${this.position[1]}><10~0~2~3~${filterList.join('|')}, `;
+                }
+                return settingsString;
+            }
+        }
+
+        function fromRoomSettingsLine(line, room) {
+            let parts = line.split('><');
+            if (parts.length < 3) return null;
+            const [objectType, xStr, yStr, rawInfo] = parts;
+            const info = rawInfo.split(", Filter")[0].trim();
+            return new PlacedObjectData(objectType, [parseFloat(xStr), parseFloat(yStr)], room, info);
+        }
+
+        // Dynamic navigation
+        var dynamicNavigation; // Stupid browsers
+        if ('pushState' in window.history) {
+            dynamicNavigation = true;
+        }
+
+        (function (w) {
+            w.URLSearchParams = w.URLSearchParams || function (searchString) {
+                //w.URLSearchParamsAlt = function (searchString) {
+                var self = this;
+                self.searchString = searchString;
+                self.values = {};
+                let result;
+                let exp = new RegExp('[\?&]([^=]*)=([^&#]*)', 'g');
+                while ((result = exp.exec(self.searchString)) != null) {
+                    console.log(result);
+                    self.values[result[1]] = decodeURI(result[2]);
+                }
+                // todo valueless
+                self.get = function (name) { return self.values[name]; };
+                self.set = function (name, value) { self.values[name] = value; };
+                self.delete = function (name) { delete self.values[name]; };
+                self.toString = function () {
+                    let str;
+                    for (var name in self.values) {
+                        if (str) str += '&'; else str = '';
+                        str += name + '=' + self.values[name];
+                    }
+                    if (!str) return '';
+                    return '?' + str;
+                };
+                return self;
+            }
+        })(window) // URLSearchParams Polyfill-ish
+
+        // Params, navigation, state
+        var params = new URLSearchParams(document.location.search);
+        var region;
+        var difficulty;
+        var room;
+        function pushState(noNavigation) {
+            let changes = false;
+            let difficulty_param = params.get("slugcat");
+            let region_param = params.get("region");
+            let room_param = params.get("room");
+
+            params.delete("slugcat");
+            params.delete("region");
+            params.delete("room");
+
+            params.set("slugcat", difficulty);
+            params.set("region", region);
+            if (room)
+                params.set("room", room);
+
+            if (difficulty != difficulty_param || region != region_param || room != room_param) {
+                // actually changed anything
+                let newstr = params.toString();
+                if (dynamicNavigation) {
+                    window.history.pushState(null, '', window.location.pathname + '?' + newstr);
+                } else if (!noNavigation) document.location.search = newstr;
+                if (!noNavigation) newState();
+
+                const regionButtons = [... document.querySelectorAll("input[name='regions']")];
+                for (const btn of regionButtons) {
+                    btn.checked = (btn.value == region);
+                }
+            }
+
+            if (region != region_param) {
+                for (let i = 0; i < slugcats.length; i++) {
+                    document.getElementById("scug-" + slugcats[i]).classList.toggle("hidden", regions[region]["slugcats"].indexOf(slugcats[i].toLowerCase()) == -1);
+                }
+            }
+        }
+        function newState() {
+            //console.log("newState");
+            params = new URLSearchParams(document.location.search);
+            region = params.get("region");
+            difficulty = params.get("slugcat") ?? "white";
+            if (region == null) {
+                window.location.href = "index.html";
+                return;
+            }
+            room = params.get("room");
+            loadRegion(difficulty, region);
+            selectDifficulty(difficulty);
+        }
+
+        window.onpopstate = newState;
+        window.onload = newState;
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializePlacedObjectMenu);
+        } else {
+            initializePlacedObjectMenu();
+        }
+
+        // Setup or something like that
+        var regions = {};
+        var regionJson = {};
+        var originalRegionJson = {};
+        var slugcats = [];
+        var poRules = {};
+
+        getJsonObject("regions.json", function (json) { regions = json; }, false);
+        getJsonObject("slugcats.json", function (json) { slugcats = json; }, false);
+        getJsonObject("placedobjectsdata.json", function (json) { poRules = json; }, false);
+
+        var html = "";
+        var regionListSorted = Object.keys(regions).sort((a, b) => regions[a]["name"].toUpperCase().localeCompare(regions[b]["name"].toUpperCase()));
+        for (const r of regionListSorted) {
+            html += `
+<label>
+    <div class="region-btn">
+        <input type="radio" class="rw-ui" name="regions" onclick="selectRegion(this.value);" value="${r}"${r == params.get("region") ? ' checked' : ''} autocomplete = "off">
+        <span>${regions[r]["name"].toUpperCase()} (${r})</span>
+    </div>
+</label>`
+            document.getElementById('region-select').innerHTML = html;
+        }
+        
+        html = "";
+        for (const slugcatName of slugcats) {
+            html += `
+<label class="difficulty-btn" id="scug-${slugcatName}">
+    <input type="radio" class="rw-ui" name="difficulties" onclick="selectDifficulty('${slugcatName}');" value="${slugcatName}"${slugcatName == difficulty ? ' checked' : ''} autocomplete="off">
+    <img src="./resources/slugcats/${slugcatName}.png">
+</label>`;
+            document.getElementById('scug-selector').innerHTML = html;
+        }
+
+        function selectRegion(value) {
+            if (region != value) {
+                room = null;
+                region = value;
+                if (regions[region]["slugcats"].indexOf(difficulty) == -1) {
+                    difficulty = regions[region]["slugcats"][0];
+                }
+                pushState();
+            }
+        }
+
+        function selectDifficulty(n) {
+            for (var i = 0; i < document.difficulty.difficulties.length; i++) {
+                if (document.difficulty.difficulties[i].value == n) {
+                    document.difficulty.difficulties[i].checked = true;
+                }
+            }
+            if (difficulty != n) {
+                difficulty = n;
+                pushState();
+            }
+        }
+
+        // Control with poor control options, whodvathot
+        // layer control with control over the classnames
+        L.Control.Layers.UnstupidLayer = L.Control.Layers.extend(
+            {
+                options: {
+                    collapsed: false,
+                    containerClass: "",
+                    sectionClass: "",
+                    overlaysListClass: "",
+                    overlayInputClass: "",
+                    overlayInputDivClass: "",
+                    overlayInputLabelClass: "",
+                    hideBaseLayers: true
+                },
+                _addItem: function (obj) {
+                    let h = L.Control.Layers.prototype._addItem.call(this, obj);
+                    h.className = this.options.overlayInputDivClass;
+                    h.children[0].className = this.options.overlayInputLabelClass;
+                    h.children[0].children[0].className = this.options.overlayInputClass;
+                    return h;
+                },
+                _initLayout: function () {
+                    L.Control.Layers.prototype._initLayout.call(this);
+                    this._container.className = this.options.containerClass;
+                    this._section.className = this.options.sectionClass;
+                    if (this.options.hideBaseLayers) {
+                        this._baseLayersList.style.display = "none";
+                        this._layersLink.style.display = "none";
+                    }
+                    this._overlaysList.className = this.options.overlaysListClass;
+                },
+                expand: function () { }
+            }
+        );
+
+        // Room hover & select stuff
+        var hilightedRoom;
+        function hilightRoom(e) {
+            if (e.target) e = e.target;
+            resetHilight();
+            hilightedRoom = e;
+            if (map.getZoom() < 0 && hilightedRoom != focusedRoom) {
+                e.setStyle({
+                    fillOpacity: 0.2
+                });
+            }
+        }
+
+        function updateHilight() {
+            if (hilightedRoom == null) return;
+            if (map.getZoom() < 0 && hilightedRoom != focusedRoom) {
+                hilightedRoom.setStyle({
+                    fillOpacity: 0.2
+                });
+            } else {
+                hilightedRoom.setStyle({
+                    fillOpacity: 0
+                });
+            }
+        }
+
+        function resetHilight() {
+            if (hilightedRoom == null) return;
+            hilightedRoom.setStyle({
+                fillOpacity: 0
+            });
+            hilightedRoom = null;
+        }
+
+        var focusedRoom;
+        function focusRoom(e) {
+            if (e.target) e = e.target;
+            if (e != focusedRoom && focusedRoom) focusedRoom.setStyle(
+                {
+                    weight: 0
+                });
+            focusedRoom = e;
+            console.log(focusedRoom.feature.properties.name + " focused")
+            map.fitBounds(e.getBounds());
+            updateHilight(); // might not move
+            focusedRoom.setStyle(
+                {
+                    weight: 6
+                });
+
+            room = e.feature.properties.name;
+            pushState();
+        }
+
+        var selectedRoom;
+        var selectedCoords;
+        var selectedPosition;
+
+        function showPlacedObjectMenu(e) {
+            selectedRoom = e.target.feature.properties.name;
+            selectedCoords = e.latlng;
+            const devPos = regionJson[`${loadedDifficulty}-${region}`]["room_devPos"].find(node => node.properties.room.toLowerCase() === selectedRoom.toLowerCase());
+            selectedPosition = devPos ? [selectedCoords.lng - devPos.geometry.coordinates[0], selectedCoords.lat - devPos.geometry.coordinates[1]] : [0, 0];
+
+            const menu = document.getElementById('placedObjectMenu');
+            menu.style.left = e.originalEvent.pageX + 'px';
+            menu.style.top = e.originalEvent.pageY + 'px';
+            menu.classList.add('open');
+
+            const closeHandler = () => {
+                menu.classList.remove('open');
+                document.removeEventListener('click', closeHandler);
+            };
+            document.addEventListener('click', closeHandler);
+        }
+
+        function placeSelectedObject(objectType) {
+            const devPos = regionJson[`${loadedDifficulty}-${region}`]["room_devPos"].find(node => node.properties.room.toLowerCase() === selectedRoom.toLowerCase());
+
+            if (!devPos) return;
+
+            const menu = document.getElementById('placedObjectMenu');
+            menu.classList.remove('open');
+
+            openPlacedObjectModal({
+                objectType,
+                position: [selectedCoords.lng - devPos.geometry.coordinates[0], selectedCoords.lat - devPos.geometry.coordinates[1]],
+                room: selectedRoom,
+                absoluteCoordinates: [selectedCoords.lng, selectedCoords.lat]
+            });
+        }
+
+        function openModal(e) {
+            _openModal(e.target.feature);
+        }
+
+        function nodeToSpawn(node, pdifficulty) {
+            var parts = node.properties.name.split("_");
+            return regionJson[`${pdifficulty}-${region}`]["spawn_features"].find(spawn => node.properties.room.toLowerCase() == spawn.properties.room.toLowerCase() && spawn.properties.den == parseInt(parts[3]));
+        }
+
+        function spawnToNode(spawn, pdifficulty) {
+            return regionJson[`${pdifficulty}-${region}`]["room_nodes"].find(node => {
+                var parts = node.properties.name.split("_");
+                return node.properties.room.toLowerCase() == spawn.properties.room.toLowerCase() && parseInt(parts[3]) == spawn.properties.den;
+            });
+        }
+
+        function updateFocus() {
+            if (focusedRoom == null) return;
+            if (!map.getBounds().overlaps(focusedRoom.getBounds())) {
+                resetFocus();
+            }
+        }
+
+        function resetFocus() {
+            if (focusedRoom == null) return;
+            console.log(focusedRoom.feature.properties.name + " no longer focused")
+            focusedRoom.setStyle(
+                {
+                    weight: 0
+                });
+            focusedRoom = null;
+
+            room = null;
+            pushState(true); // no navigation so no zoom change
+        }
+
+        function objectTypeToImage(objectType) {
+            if (objectType === "reliablespear") {
+                objectType = "spear";
+            }
+            if (objectType === "placedboxworm") {
+                objectType = "boxworm";
+            }
+            if (objectType === "placedfiresprite") {
+                objectType = "firesprite";
+            }
+            if (objectType === "placeddrillcrab") {
+                objectType = "drillcrab";
+            }
+            if (objectType === "placedrats") {
+                objectType = "rat";
+            }
+            if (objectType === "placedfrog") {
+                objectType = "frog";
+            }
+            if (objectType === "placedloach") {
+                objectType = "loach";
+            }
+            if (objectType === "placedrotloach") {
+                objectType = "rotloach";
+            }
+            if (objectType === "placedbarnacles") {
+                objectType = "barnacle";
+            }
+            if (objectType === "bigjellyfish") {
+                objectType = "bigjelly";
+            }
+            if (objectType === "deadvulturegrub") {
+                objectType = "vulturegrub";
+            }
+            if (objectType === "deadhazer") {
+                objectType = "hazer";
+            }
+            if (objectType === "stowaway") {
+                objectType = "stowawaybug";
+            }
+
+            return objectType;
+        }
+
+        function objectTypeToDisplayName(objectType) {
+            const displayNames = {
+                "ripplespawnegg": "RippleSpawnEgg",
+                "flarebomb": "FlareBomb",
+                "puffball": "PuffBall",
+                "danglefruit": "DangleFruit",
+                "datapearl": "DataPearl",
+                "seedcob": "SeedCob",
+                "waternut": "WaterNut",
+                "karmaflower": "KarmaFlower",
+                "mushroom": "Mushroom",
+                "slimemold": "SlimeMold",
+                "flylure": "FlyLure",
+                "firecrackerplant": "FirecrackerPlant",
+                "reliablespear": "ReliableSpear",
+                "sporeplant": "SporePlant",
+                "needleegg": "NeedleEgg",
+                "bubblegrass": "BubbleGrass",
+                "jellyfish": "JellyFish",
+                "vulturegrub": "VultureGrub",
+                "deadvulturegrub": "DeadVultureGrub",
+                "hazer": "Hazer",
+                "deadhazer": "DeadHazer",
+                "rattler": "Rattler",
+                "bigjellyfish": "BigJellyFish",
+                "stowaway": "Stowaway",
+                "placedboxworm": "PlacedBoxWorm",
+                "placedfiresprite": "PlacedFireSprite",
+                "placeddrillcrab": "PlacedDrillCrab",
+                "placedrats": "PlacedRats",
+                "placedfrog": "PlacedFrog",
+                "placedloach": "PlacedLoach",
+                "placedrotloach": "PlacedRotLoach",
+                "placedbarnacles": "PlacedBarnacles",
+                "lantern": "Lantern",
+                "graffitibomb": "GraffitiBomb",
+                "gooieduck": "GooieDuck",
+                "lillypuck": "LillyPuck",
+                "glowweed": "GlowWeed",
+                "dandelionpeach": "DandelionPeach",
+                "rottendanglefruit": "RottenDangleFruit",
+                "rottenseedcob": "RottenSeedCob"
+            };
+
+            return displayNames[objectType] ?? objectType;
+        }
+
+        function drawPlacedObjects(pdifficulty) {
+            let hadPlacedObjects = map.hasLayer(placedObjectsMarkerLayer) || loadedRegion == null;
+            if (placedObjectsMarkerLayer != null) {
+                overlays.removeLayer(placedObjectsMarkerLayer);
+                map.removeLayer(placedObjectsMarkerLayer);
+            }
+
+            const placedObjs = regionJson[`${pdifficulty}-${region}`]["placed_objects"] || [];
+            placedObjectsMarkerLayer = L.featureGroup();
+
+            for (const feature of placedObjs) {
+                const latlng = L.latLng(feature.geometry.coordinates[1], feature.geometry.coordinates[0]);
+                const id = feature.properties.id;
+                const objectType = feature.properties.object;
+                
+                let objhtml = `
+                    <div>
+                        <img class="placed-object-image" src="./resources/icons/${objectTypeToImage(objectType.toLowerCase())}.png"/>
+                        <button class="delete-object-btn" data-id="${id}" title="Delete object">x</button>
+                    </div>`;
+
+                const marker = L.marker(latlng, {
+                    icon: L.divIcon({
+                        className: 'placed-object-divs',
+                        html: objhtml,
+                    }),
+                    interactive: true,
+                });
+
+                marker.on('click', function (e) {
+                    e.originalEvent.stopPropagation();
+                    openPlacedObjectModal({ feature });
+                });
+
+                marker.on('add', function() {
+                    const container = this.getElement();
+                    if (container) {
+                        const deleteBtn = container.querySelector('.delete-object-btn');
+                        if (deleteBtn) {
+                            const clickHandler = (e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                regionJson[`${pdifficulty}-${region}`]["placed_objects"] = 
+                                    regionJson[`${pdifficulty}-${region}`]["placed_objects"].filter(obj => obj.properties.id !== id);
+                                drawPlacedObjects(pdifficulty);
+                            };
+                            deleteBtn.addEventListener('click', clickHandler);
+                            deleteBtn._clickHandler = clickHandler;
+                        }
+                    }
+                });
+
+                marker.on('remove', function() {
+                    const container = this.getElement();
+                    if (container) {
+                        const deleteBtn = container.querySelector('.delete-object-btn');
+                        if (deleteBtn && deleteBtn._clickHandler) {
+                            deleteBtn.removeEventListener('click', deleteBtn._clickHandler);
+                        }
+                    }
+                });
+
+                placedObjectsMarkerLayer.addLayer(marker);
+            }
+
+            if (hadPlacedObjects) placedObjectsMarkerLayer.addTo(map);
+            overlays.addOverlay(placedObjectsMarkerLayer, "C. Placed Objects");
+        }
+
+        // Map
+        var map = L.map('mapid', {
+            minZoom: -7,
+            maxZoom: 3, // 8x
+            zoomSnap: 0,
+            crs: L.CRS.Simple,
+            zoomControl: false,
+        });
+        map.attributionControl.setPrefix('Powered by <a href="https://leafletjs.com" target="_blank" title="A JS library for interactive maps">Leaflet</a>, <a href="https://github.com/henpemaz" target="_blank" title="Gamedev &amp; associated arts enthusiast">Henpemaz</a>, &amp; <a href="https://github.com/alduris" target="_blank" title="Fox enthusiast and sometimes a programmer">Alduris</a> | Join the <a href="https://discord.gg/kPGJNhrnu2" target="_blank">Rain World Modding Server</a>')
+        map.setView([0, 0], -5);
+
+        // Events
+        map.on('click', function (e) { if (e.originalEvent.target == map._container) resetFocus(); });
+        // remove room highlight on maxed zoom
+        map.on('zoomend', updateHilight);
+        map.on('moveend', updateFocus);
+        L.Tooltip.include({
+            setOpacity: function (o) { } // fuck you, don't style my elements unless I tell you to.
+        });
+        // on Room Names view, prevent hover popups from displaying
+        map.on('overlayadd', function (e) {
+            if (e.name == "Room Names") {
+                document.getElementById('hoverlabels').sheet.cssRules[0].style.display = 'none';
+            }
+        });
+        map.on('overlayremove', function (e) {
+            if (e.name == "Room Names") {
+                document.getElementById('hoverlabels').sheet.cssRules[0].style.removeProperty("display");
+            }
+        });
+
+        // Overlay control
+        var overlays = new L.Control.Layers.UnstupidLayer(null, null, {
+            overlayInputClass: "rw-ui",
+            overlayInputLabelClass: "overlay-label",
+        });
+        overlays.addTo(map);
+        document.getElementById('layer-content').appendChild(overlays.getContainer());
+
+        // MODAL
+        const overlay = document.getElementById('modalOverlay');
+        const modalTitle = document.getElementById('modalTitle');
+        const placedObjectFields = document.getElementById('placedObjectFields');
+        const spawnCards = document.getElementById('spawnCards');
+        const addSpawnBtn = document.getElementById('addSpawnBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const modalClose = document.getElementById('modalClose');
+
+        let currentNode = null;
+        let currentPlacedObject = null;
+
+        function placedObjectDefaultSettings(objectType, position) {
+            if (!objectMap[objectType]) return '';
+            const output = objectMap[objectType]([], position);
+            return output.split('><')[3]?.split(',')[0]?.trim() ?? '';
+        }
+
+        function openPlacedObjectModal(data) {
+            currentNode = null;
+            currentPlacedObject = data.feature || null;
+            const properties = data.feature?.properties || {};
+            const objectType = properties.object || data.objectType || '';
+            const position = properties.position || data.position || [0, 0];
+            const room = properties.room || data.room || selectedRoom || '';
+            const info = properties.info || placedObjectDefaultSettings(objectType, position);
+
+            modalTitle.textContent = 'Placed Object';
+            placedObjectFields.innerHTML = `
+                <div class="spawn-card">
+                    <div style="display:flex;flex-direction:row;margin-bottom:8px;gap:8px;justify-content:space-between;align-items:center;">
+                        <label>Object type</label>
+                        <input type="text" class="f-object-type rw-text input-field" value="${objectTypeToDisplayName(objectType)}" placeholder="CustomObject" />
+                    </div>
+                    <div style="display:flex;flex-direction:row;margin-bottom:8px;gap:8px;justify-content:space-between;align-items:center;">
+                        <label>Room</label>
+                        <input type="text" class="f-object-room rw-text input-field" value="${room}" />
+                    </div>
+                    <div style="display:flex;flex-direction:row;margin-bottom:8px;gap:8px;justify-content:space-between;align-items:center;">
+                        <label>X</label>
+                        <input type="number" class="f-object-x rw-text input-field" value="${position[0]}" />
+                        <label>Y</label>
+                        <input type="number" class="f-object-y rw-text input-field" value="${position[1]}" />
+                    </div>
+                    <label style="display:block;margin-bottom:8px;">Object data</label>
+                    <textarea class="f-object-info rw-text input-field" rows="5" placeholder="1~2~3" style="width:100%;box-sizing:border-box;">${info}</textarea>
+                </div>`;
+            placedObjectFields.classList.remove('hidden');
+            spawnCards.classList.add('hidden');
+            addSpawnBtn.classList.add('hidden');
+            overlay.classList.add('open');
+        }
+
+        function addSpawnCard(spawn = {}) {
+            const card = document.createElement('div');
+            card.className = 'spawn-card';
+
+            const isLineage = spawn.is_lineage ?? false;
+            const lineage = spawn.lineage || [];
+            const lineageProbs = spawn.lineage_probs || [];
+            const lineageData = spawn.lineage_data || [];
+
+            card.innerHTML = `
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                    <strong>Spawn</strong>
+                    <button type="button" class="remove-spawn rw-ui" title="Remove spawn" style="color: #cccccc;background-color:#0c0c0c;width:fit-content;padding:4px 8px;margin-left:auto;">&times;</button>
+                </div>
+                <div>
+                    <div style="display:flex;flex-direction:row;margin-bottom:8px;padding:0 4px;gap:8px;justify-content:space-between;align-items:center;">
+                        <label>Creature</label>
+                        <input type="text" class="f-creature rw-text input-field" value="${spawn.creature ?? ''}" placeholder="Snail" />
+                    </div>
+                    <div style="display:flex;flex-direction:row;margin-bottom:8px;padding:0 4px;gap:8px;justify-content:space-between;align-items:center;">
+                        <label>Amount</label>
+                        <input type="number" class="f-amount rw-text input-field" value="${spawn.amount ?? 1}" min="0" />
+                    </div>
+                    <div style="display:flex;flex-direction:row;margin-bottom:8px;padding:0 4px;gap:8px;justify-content:space-between;align-items:center;">
+                        <label>Spawn data</label>
+                        <input type="text" class="f-spawn-data rw-text input-field" value="${spawn.spawn_data ?? ''}" placeholder="{PreCycle|Seed:123}" />
+                    </div>
+                    <label style="display:flex;flex-direction:row;margin-bottom:8px;padding:0 4px;gap:8px;">
+                        <input type="checkbox" class="f-is-lineage" ${isLineage ? 'checked' : ''} />
+                        Is lineage
+                    </label>
+                </div>
+                <div class="lineage-box" style="display: ${isLineage ? 'block' : 'none'}">
+                    <div class="rw-text" style="display:flex;flex-direction:row;margin-bottom:8px;padding:0 4px;gap:8px;font-weight:bold;justify-content:space-between;">
+                        <span>Creature</span>
+                        <span>Probability (0 - 1)</span>
+                        <span>Data</span>
+                        <span></span>
+                    </div>
+                    <div class="lineage-rows"></div>
+                    <button type="button" class="add-lineage-row rw-ui" style="color: #cccccc;background-color:#0c0c0c;width:fit-content;margin:auto;padding:4px 8px;">+ Add lineage step</button>
+                </div>
+            `;
+
+            const lineageBox = card.querySelector('.lineage-box');
+            const lineageRows = card.querySelector('.lineage-rows');
+            const isLineageCheckbox = card.querySelector('.f-is-lineage');
+
+            function addLineageRow(creature = '', prob = '0.0000', dataVal = null) {
+                const row = document.createElement('div');
+                row.className = 'lineage-row';
+                row.innerHTML = `
+                    <input type="text" class="l-creature rw-text input-field" value="${creature}" placeholder="Creature" />
+                    <input type="text" class="l-prob rw-text input-field" value="${prob}" placeholder="0.0000" />
+                    <input type="text" class="l-data rw-text input-field" value="${dataVal ?? ''}" placeholder="{PreCycle|Seed:123}" />
+                    <button type="button" class="remove-lineage-row rw-ui" title="Remove" style="color: #cccccc;background-color:#0c0c0c;width:fit-content;margin:auto;padding:4px 8px;">&times;</button>
+                `;
+                row.querySelector('.remove-lineage-row').addEventListener('click', () => row.remove());
+                lineageRows.appendChild(row);
+            }
+
+            if (lineage.length === 0 && isLineage) {
+                addLineageRow();
+            } else {
+                lineage.forEach((creature, i) => {
+                    addLineageRow(creature, lineageProbs[i] ?? '0.0000', lineageData[i] ?? null);
+                });
+            }
+
+            isLineageCheckbox.addEventListener('change', () => {
+                lineageBox.style.display = isLineageCheckbox.checked ? 'block' : 'none';
+                if (isLineageCheckbox.checked && lineageRows.children.length === 0) addLineageRow();
+            });
+
+            card.querySelector('.add-lineage-row').addEventListener('click', () => addLineageRow());
+            card.querySelector('.remove-spawn').addEventListener('click', () => card.remove());
+
+            spawnCards.appendChild(card);
+        }
+
+        function _openModal(data) {
+            closeModal();
+            modalTitle.textContent = data.properties.name;
+
+            spawnCards.innerHTML = '';
+            currentNode = data;
+            nodeToSpawn(data, loadedDifficulty)?.properties.spawns.forEach(spawn => addSpawnCard(spawn));
+
+            overlay.classList.add('open');
+        }
+
+        function closeModal() {
+            overlay.classList.remove('open');
+            currentNode = null;
+            currentPlacedObject = null;
+            placedObjectFields.classList.add('hidden');
+            spawnCards.classList.remove('hidden');
+            addSpawnBtn.classList.remove('hidden');
+        }
+
+        addSpawnBtn.addEventListener('click', addSpawnCard);
+        cancelBtn.addEventListener('click', closeModal);
+        modalClose.addEventListener('click', closeModal);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+
+        saveBtn.addEventListener('click', () => {
+            if (!placedObjectFields.classList.contains('hidden')) {
+                const objectType = placedObjectFields.querySelector('.f-object-type').value.trim();
+                const roomName = placedObjectFields.querySelector('.f-object-room').value.trim();
+                const position = [Number(placedObjectFields.querySelector('.f-object-x').value), Number(placedObjectFields.querySelector('.f-object-y').value)];
+                const devPos = regionJson[`${loadedDifficulty}-${region}`]["room_devPos"].find(node => node.properties.room.toLowerCase() === roomName.toLowerCase());
+                const properties = {
+                    object: objectType,
+                    room: roomName,
+                    position,
+                    info: placedObjectFields.querySelector('.f-object-info').value.trim()
+                };
+
+                var feature = null;
+                if (currentPlacedObject)
+                {
+                    feature = currentPlacedObject;
+                    feature.geometry.coordinates = [position[0] + devPos.geometry.coordinates[0], position[1] + devPos.geometry.coordinates[1]];
+                }
+                else
+                {
+                    const placedObj = new PlacedObjectData(objectType, position, roomName);
+                    feature = placedObj.toGeoJSONFeature([position[0] + devPos.geometry.coordinates[0], position[1] + devPos.geometry.coordinates[1]]);
+                }
+
+                feature.properties = { ...feature.properties, ...properties };
+                if (!currentPlacedObject)
+                {
+                    const placedObjects = regionJson[`${loadedDifficulty}-${region}`]["placed_objects"];
+                    placedObjects.push(feature);
+                }
+
+                drawPlacedObjects(loadedDifficulty);
+                closeModal();
+                return;
+            }
+
+            const spawns = [];
+            spawnCards.querySelectorAll('.spawn-card').forEach((card) => {
+                const isLineage = card.querySelector('.f-is-lineage').checked;
+                const amountRaw = card.querySelector('.f-amount').value;
+                const spawnDataRaw = card.querySelector('.f-spawn-data').value.trim();
+
+                const spawn = {
+                    is_lineage: isLineage,
+                    amount: amountRaw === '' ? 0 : Number(amountRaw),
+                    creature: card.querySelector('.f-creature').value.trim(),
+                    spawn_data: spawnDataRaw === '' ? null : spawnDataRaw
+                };
+
+                if (isLineage) {
+                    const lineage = [];
+                    const lineageProbs = [];
+                    const lineageData = [];
+                    card.querySelectorAll('.lineage-row').forEach((row) => {
+                        lineage.push(row.querySelector('.l-creature').value.trim());
+                        lineageProbs.push(row.querySelector('.l-prob').value.trim());
+                        const dataVal = row.querySelector('.l-data').value.trim();
+                        lineageData.push(dataVal === '' ? null : dataVal);
+                    });
+                    spawn.lineage = lineage;
+                    spawn.lineage_probs = lineageProbs;
+                    spawn.lineage_data = lineageData;
+                }
+
+                spawns.push(spawn);
+            });
+
+            var _spawns = nodeToSpawn(currentNode, loadedDifficulty);
+            if (_spawns) {
+                _spawns.properties.spawns = spawns;
+            }
+            else {
+                const newSpawnFeature = {
+                    type: "Feature",
+                    properties: {
+                        room: currentNode.properties.room,
+                        den: parseInt(currentNode.properties.name.split("_")[3]),
+                        spawns: spawns
+                    },
+                    geometry: {
+                        type: "Point",
+                        coordinates: [currentNode.geometry.coordinates[0], currentNode.geometry.coordinates[1]]
+                    }
+                };
+                regionJson[`${loadedDifficulty}-${region}`]["spawn_features"].push(newSpawnFeature);
+            }
+            overlay.classList.remove('open');
+            currentNode = null;
+
+            drawSpawns(loadedDifficulty);
+        });
+
+        function spawnFeaturesToWorldTxt(spawnFeatures, originalSpawnFeatures) {
+            let lines = [];
+            for (const feature of originalSpawnFeatures) {
+                var room = feature.properties.room;
+                if (room.toLowerCase().includes("offscreen"))
+                    room = "OFFSCREEN";
+                const den = feature.properties.den;
+                for (const spawn of feature.properties.spawns) {
+                    var creature = spawn.creature;
+                    const amount = spawn.amount;
+                    const spawnData = spawn.spawn_data ?? '';
+                    var spawnStr = `[FINDLINESTART]`;
+                    if (spawn.is_lineage) {
+                        spawnStr += "LINEAGE : ";
+                    }
+                    spawnStr += `${room} : ${den}`;
+                    lines.push(spawnStr);
+                    lines.push(`[ADDBEFORE](X-${loadedDifficulty.charAt(0).toUpperCase() + loadedDifficulty.slice(1)})`);
+                }
+            }
+
+            var origSpawnsMap = {};
+            lines.push("[MERGE]");
+            lines.push("CREATURES");
+            for (const feature of originalSpawnFeatures) {
+                var room = feature.properties.room;
+                if (room.toLowerCase().includes("offscreen"))
+                    room = "OFFSCREEN";
+                if (origSpawnsMap[room] == null)
+                    origSpawnsMap[room] = [];
+                const den = feature.properties.den;
+                for (const spawn of feature.properties.spawns) {
+                    var creature = spawn.creature;
+                    const amount = spawn.amount;
+                    const spawnData = spawn.spawn_data ?? '';
+                    var spawnStr = `(${loadedDifficulty.charAt(0).toUpperCase() + loadedDifficulty.slice(1)})`;
+                    if (spawn.is_lineage) {
+                        spawnStr += "LINEAGE : ";
+                        spawnStr += `${room} : ${den} : `;
+                        // const lineageStr = spawn.lineage.map((creature, i) => {
+                        //     const prob = parseFloat(spawn.lineage_probs[i]).toString();
+                        //     if (creature === "")
+                        //         creature = "NONE";
+                        //     var linStr = `${creature}-`;
+                        //     if (spawn.lineage_data[i]) linStr += `${spawn.lineage_data[i]}-`;
+                        //     linStr += `${prob}`;
+                        //     return linStr;
+                        // }).join(', ');
+                        // spawnStr += lineageStr;
+                        spawnStr += "NONE-0";
+                        lines.push(spawnStr);
+                    } else {
+                        spawnStr += `${room} : ${den}-NONE`;
+                        // spawnStr += `${room} : ${den}-${creature}`;
+                        // if (spawnData) spawnStr += `-${spawnData}`;
+                        // if (amount > 1) spawnStr += `-${amount}`;
+                        if (!origSpawnsMap[room].includes(spawnStr))
+                            origSpawnsMap[room].push(spawnStr);
+                    }
+                    // lines.push("[FINDLINEREGEX].*" + spawnStr + ".*");
+                    // lines.push("[REPLACE]");
+                }
+            }
+
+            for (const [key, value] of Object.entries(origSpawnsMap)) {
+                if (value.length > 0)
+                {
+                    var str = value[0];
+                    for (var i = 1; i < value.length; i++)
+                    {
+                        str += ", " + value[i].split(" : ")[1];
+                    }
+                    lines.push(str);
+                }
+            }
+
+            var spawnsMap = {};
+            // lines.push("[MERGE]");
+            // lines.push("CREATURES");
+            for (const feature of spawnFeatures) {
+                var room = feature.properties.room;
+                if (room.toLowerCase().includes("offscreen"))
+                    room = "OFFSCREEN";
+                if (spawnsMap[room] == null)
+                    spawnsMap[room] = [];
+                const den = feature.properties.den;
+                for (const spawn of feature.properties.spawns) {
+                    var creature = spawn.creature;
+                    const amount = spawn.amount;
+                    const spawnData = spawn.spawn_data ?? '';
+                    var spawnStr = `(${loadedDifficulty.charAt(0).toUpperCase() + loadedDifficulty.slice(1)})`;
+                    if (spawn.is_lineage) {
+                        spawnStr += "LINEAGE : ";
+                        spawnStr += `${room} : ${den} : `;
+                        const lineageStr = spawn.lineage.map((creature, i) => {
+                            const prob = parseFloat(spawn.lineage_probs[i]).toString();
+                            if (creature === "")
+                                creature = "NONE";
+                            var linStr = `${creature}-`;
+                            if (spawn.lineage_data[i]) linStr += `${spawn.lineage_data[i]}-`;
+                            linStr += `${prob}`;
+                            return linStr;
+                        }).join(', ');
+                        spawnStr += lineageStr;
+                        lines.push(spawnStr);
+                    } else {
+                        spawnStr += `${room} : ${den}-${creature}`;
+                        if (spawnData) spawnStr += `-${spawnData}`;
+                        if (amount > 1) spawnStr += `-${amount}`;
+                        spawnsMap[room].push(spawnStr);
+                    }
+                }
+            }
+
+            for (const [key, value] of Object.entries(spawnsMap)) {
+                if (value.length > 0)
+                {
+                    var str = value[0];
+                    for (var i = 1; i < value.length; i++)
+                    {
+                        str += ", " + value[i].split(" : ")[1];
+                    }
+                    lines.push(str);
+                }
+            }
+
+            lines.push("END CREATURES");
+            lines.push("[ENDMERGE]");
+            return lines.join('\n');
+        }
+
+        const exportBtn = document.getElementById('exportBtn');
+        exportBtn.addEventListener('click', async () => {
+            exportBtn.disabled = true;
+
+            try {
+                const zip = new JSZip();
+                const modifyFolder = zip.folder('modify');
+                const worldFolder = modifyFolder.folder('world');
+                const regionFolder = worldFolder.folder(region.toLowerCase());
+                regionFolder.file(`world_${region.toLowerCase()}.txt`, spawnFeaturesToWorldTxt(regionJson[`${loadedDifficulty}-${region}`]["spawn_features"], originalRegionJson[`${loadedDifficulty}-${region}`]["spawn_features"]));
+                
+                var roomSettingsMap = {};
+                var regionSettingsFolder = worldFolder.folder(region.toLowerCase() + "-rooms");
+                var filterList = ["White", "Yellow", "Red", "Rivulet", "Artificer", "Saint", "Spear", "Gourmand", "Watcher"].filter(c => c !== loadedDifficulty.charAt(0).toUpperCase() + loadedDifficulty.slice(1));
+
+                for (var placedObj of regionJson[`${loadedDifficulty}-${region}`]["placed_objects"]) {
+                    const objData = new PlacedObjectData(placedObj.properties.object, placedObj.properties.position, placedObj.properties.room);
+                    const roomKey = placedObj.properties.room.toLowerCase();
+                    const settingsStr = objData.toRoomSettingsString(loadedDifficulty, filterList, placedObj.properties.info);
+
+                    if (!roomSettingsMap[roomKey]) {
+                        roomSettingsMap[roomKey] = `PlacedObjects: ${settingsStr}`;
+                    } else {
+                        roomSettingsMap[roomKey] += settingsStr;
+                    }
+                }
+
+                for (const [key, value] of Object.entries(roomSettingsMap)) {
+                    regionSettingsFolder.file(`${key}_settings.txt`, `[MERGE]\n${value}\n[ENDMERGE]`);
+                }
+
+                const blob = await zip.generateAsync({ type: 'blob' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `map_export_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.zip`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+            } catch (err) {
+                console.error('Export failed:', err);
+                alert('Export failed');
+            } finally {
+                exportBtn.disabled = false;
+            }
+        });
+
+        const uploadBtn = document.getElementById('uploadBtn');
+        const fileInput = document.getElementById('fileInput');
+
+        uploadBtn.addEventListener('click', () => fileInput.click());
+
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(reader.error);
+                reader.readAsText(file);
+            });
+        }
+
+        fileInput.addEventListener('change', async (e) => {
+            var hasSettings = Array.from(e.target.files).some(file => file.name.includes("settings"));
+            if (e.target.files.length === 1 && !hasSettings)
+            {
+                const file = e.target.files[0];
+                uploadBtn.disabled = true;
+                const text = await readFileAsText(file);
+
+                const world = file.name.split(".txt")[0].split("_")[1];
+                if (world.toLowerCase() == region.toLowerCase())
+                {
+                    regionJson[`${loadedDifficulty}-${region}`]["spawn_features"] = [];
+                    const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0 && l !== "[MERGE]" && l !== "[ENDMERGE]" && l !== "CREATURES" && l !== "END CREATURES" && !l.includes("REPLACE") && !l.includes("FIND") && !l.includes("ADD"));
+                    for (const line of lines)
+                    {
+                        var [_, diff, rest] = line.match(/^\(([^)]+)\)(.*)$/);
+                        if (diff.toLowerCase() !== loadedDifficulty.toLowerCase())
+                            continue;
+                        var parts = rest.split(" : ");
+                        if (parts.length === 4)
+                        {
+                            var room = parts[1];
+                            if (room === "OFFSCREEN")
+                                room = "OffScreenDen_" + region;
+                            var den = parts[2];
+                            var spawns = parts[3];
+                            var individualSpawns = spawns.split(", ");
+                            var spawnData = null;
+                            var spawnCret = null;
+                            var spawnProb = null;
+                            if (individualSpawns[0].split("-").length > 2)
+                                spawnData = individualSpawns[0].split("-")[1];
+
+                            const spawn = {
+                                is_lineage: true,
+                                amount: 1,
+                                creature: individualSpawns[0].split("-")[0] === "NONE" ? "" : spawnParts[0],
+                                spawn_data: spawnData === null ? null : spawnData
+                            };
+
+                            const lineage = [];
+                            const lineageProbs = [];
+                            const lineageData = [];
+                            for (var linSpawn of individualSpawns) {
+                                var spawnParts = linSpawn.split("-");
+                                spawnData = null;
+                                if (spawnParts.length > 2)
+                                {
+                                    spawnCret = spawnParts[0] === "NONE" ? "" : spawnParts[0];
+                                    spawnData = spawnParts[1];
+                                    spawnProb = spawnParts[2];
+                                }
+                                else
+                                {
+                                    spawnCret = spawnParts[0] === "NONE" ? "" : spawnParts[0];
+                                    spawnProb = spawnParts[1];
+                                }
+                                lineage.push(spawnCret);
+                                lineageProbs.push(spawnProb);
+                                lineageData.push(spawnData === null ? null : spawnData);
+                            }
+                            spawn.lineage = lineage;
+                            spawn.lineage_probs = lineageProbs;
+                            spawn.lineage_data = lineageData;
+
+                            if (spawn.lineage.every(s => s === ""))
+                                continue;
+
+                            const newSpawnFeature = {
+                                type: "Feature",
+                                properties: {
+                                    room: room,
+                                    den: parseInt(den),
+                                    spawns: [spawn]
+                                }
+                            };
+                            var node = spawnToNode(newSpawnFeature, loadedDifficulty);
+                            newSpawnFeature["geometry"] = {
+                                type: "Point",
+                                coordinates: [node.geometry.coordinates[0], node.geometry.coordinates[1]]
+                            };
+
+                            var currSpawnFeature = nodeToSpawn(node, loadedDifficulty);
+                            if (!currSpawnFeature)
+                            {
+                                regionJson[`${loadedDifficulty}-${region}`]["spawn_features"].push(newSpawnFeature);
+                            }
+                            else
+                            {
+                                currSpawnFeature.properties.spawns.push(spawn);
+                            }
+                        }
+                        else
+                        {
+                            var room = parts[0];
+                            if (room === "OFFSCREEN")
+                                room = "OffScreenDen_" + region;
+                            var spawns = parts[1];
+                            var individualSpawns = spawns.split(", ");
+                            for (var indviSpawn of individualSpawns)
+                            {
+                                var spawnAm = null;
+                                var spawnCret = null;
+                                var spawnData = null;
+                                var parts = indviSpawn.split("-");
+                                var den = parts[0];
+                                spawnCret = parts[1];
+                                if (spawnCret === "NONE")
+                                    continue;
+                                switch (parts.length)
+                                {
+                                    case 2:
+                                        spawnAm = 1;
+                                        break;
+                                    case 3:
+                                        if (parts[2].includes("{"))
+                                        {
+                                            spawnData = parts[2];
+                                            spawnAm = 1;
+                                        }
+                                        else
+                                            spawnAm = parts[2];
+                                        break;
+                                    case 4:
+                                        spawnData = parts[2];
+                                        spawnAm = parts[3];
+                                        break;
+                                }
+
+                                const spawn = {
+                                    is_lineage: false,
+                                    amount: Number(spawnAm),
+                                    creature: spawnCret,
+                                    spawn_data: spawnData === null ? null : spawnData
+                                };
+
+                                const newSpawnFeature = {
+                                    type: "Feature",
+                                    properties: {
+                                        room: room,
+                                        den: parseInt(den),
+                                        spawns: [spawn]
+                                    }
+                                };
+                                var node = spawnToNode(newSpawnFeature, loadedDifficulty);
+                                newSpawnFeature["geometry"] = {
+                                    type: "Point",
+                                    coordinates: [node.geometry.coordinates[0], node.geometry.coordinates[1]]
+                                };
+
+                                var currSpawnFeature = nodeToSpawn(node, loadedDifficulty);
+                                if (!currSpawnFeature)
+                                {
+                                    regionJson[`${loadedDifficulty}-${region}`]["spawn_features"].push(newSpawnFeature);
+                                }
+                                else
+                                {
+                                    currSpawnFeature.properties.spawns.push(spawn);
+                                }
+                            }
+                        }
+                    }
+
+                    if (regionJson[`${loadedDifficulty}-${region}`]["spawn_features"].length > 0)
+                        drawSpawns(loadedDifficulty);
+                }
+            }
+            else
+            {
+                const files = Array.from(e.target.files);
+                uploadBtn.disabled = true;
+                for (const file of files) {
+                    const text = await readFileAsText(file);
+                    const world = file.name.split(".txt")[0].split("_")[0];
+                    var roomParts = file.name.split(".txt")[0].split("_");
+                    const room = roomParts[0] + "_" + roomParts[1];
+
+                    if (world.toLowerCase() == region.toLowerCase())
+                    {
+                        regionJson[`${loadedDifficulty}-${region}`]["placed_objects"] = regionJson[`${loadedDifficulty}-${region}`]["placed_objects"].filter(obj => obj.properties.room.toLowerCase() !== room.toLowerCase());
+
+                        const lines = text.split("\n").filter(l => l.length > 0 && l !== "[MERGE]" && l !== "[ENDMERGE]" && l !== "CREATURES" && l !== "END CREATURES" && !l.includes("REPLACE") && !l.includes("FIND") && !l.includes("ADD"));
+
+                        for (const line of lines)
+                        {
+                            if (line.startsWith("PlacedObjects: "))
+                            {
+                                const settingsStr = line.replace("PlacedObjects: ", "").trim();
+                                const objDataList = settingsStr.split(", ").filter(s => !s.includes("Filter"));
+                                var i = 0;
+                                for (const objDataStr of objDataList)
+                                {
+                                    const objData = fromRoomSettingsLine(objDataStr, room);
+                                    if (objData)
+                                    {
+                                        objData.id = objData.id + "_" + i++; // Timestamp not unique since objects mass added at once
+                                        const devPos = regionJson[`${loadedDifficulty}-${region}`]["room_devPos"].find(node => node.properties.room.toLowerCase() === room.toLowerCase());
+                                        var x = objData.position[0];
+                                        var y = objData.position[1];
+
+                                        regionJson[`${loadedDifficulty}-${region}`]["placed_objects"].push(objData.toGeoJSONFeature([x + devPos.geometry.coordinates[0], y + devPos.geometry.coordinates[1]]));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                drawPlacedObjects(loadedDifficulty);
+            }
+
+            uploadBtn.disabled = false;
+            fileInput.value = '';
+        });
+
+
+        // Region stuff
+        function drawSpawns(pdifficulty) {
+            let hadSpawns = map.hasLayer(densLayer) || loadedRegion == null;
+            if (densLayer != null) {
+                overlays.removeLayer(densLayer);
+                map.removeLayer(densLayer);
+            }
+            densLayer = L.geoJSON(regionJson[`${pdifficulty}-${region}`]["spawn_features"], {
+                pointToLayer: function (feature, latlng) {
+                    // Spawns are organized by dens, dens list spawns in it, flexbox stacks them visually on the den location, filter classes control visib
+                    let divhtml = "";
+                    for (let spawn of feature.properties.spawns) {
+                        let spawn_filter = " spawn-filter";
+                        if (spawn.is_lineage) {
+                            // lineages are vertical stacks
+                            divhtml += '<div class="spawn-entry ' + spawn_filter + '">';
+                            for (let i = 0; i < spawn.lineage.length; i++) {
+                                let tooltip = "";
+                                let rottype = 0;
+                                if (spawn.lineage_data != null && spawn.lineage_data[i] != null && spawn.lineage_data[i].length > 2) {
+                                    let spawndata = spawn.lineage_data[i].substring(1, spawn.lineage_data[i].length - 1).split("|").map(x => x.trim()).filter(x => isNaN(x));
+
+                                    if (spawndata.indexOf("Night") > -1) {
+                                        tooltip += "🌙";
+                                        spawndata.splice(spawndata.indexOf("Night"), 1);
+                                    }
+                                    if (spawndata.indexOf("PreCycle") > -1) {
+                                        tooltip += "🚿";
+                                        spawndata.splice(spawndata.indexOf("PreCycle"), 1);
+                                    }
+                                    if (spawndata.indexOf("Winter") > -1) {
+                                        tooltip += "❄️";
+                                        spawndata.splice(spawndata.indexOf("Winter"), 1);
+                                    }
+                                    if (spawndata.findIndex(x => x.startsWith("RotType")) > -1) {
+                                        let rotflag = spawndata.find(x => x.startsWith("RotType"));
+                                        switch (rotflag) {
+                                            case "RotType:1":
+                                            case "RotType:2":
+                                                rottype = 1;
+                                                break;
+                                            case "RotType:3":
+                                                rottype = 2;
+                                                break;
+                                        }
+                                        // spawndata.splice(spawndata.findIndex(x => x.startsWith("RotType")), 1);
+                                    }
+                                    if (spawndata.findIndex(x => x.startsWith("NamedAttr")) > -1) {
+                                        spawndata.splice(spawndata.findIndex(x => x.startsWith("NamedAttr")));
+                                    }
+                                    if (tooltip.length > 0) tooltip += ", ";
+                                    tooltip += spawndata.join(", ");
+                                }
+
+                                let icon = spawn.lineage[i].toLowerCase();
+                                if (rottype > 0) icon = icon + "_" + rottype;
+                                let path = "./resources/icons/" + icon + ".png";
+                                if (spawn.lineage[i] == "") path = "./resources/none.png";
+                                divhtml += `<div class="lineage-entry${rottype > 0 ? " tall" : ""}">
+                                    <img class="icon-image" src="${path}"/>
+                                    <div class="icon-label">${Math.trunc(Number.parseFloat(spawn.lineage_probs[i]) * 100)}%</div>
+                                    <div class="icon-tooltip">${tooltip}</div>
+                                    </div>`;
+                            }
+                            divhtml += '</div>';
+                        } else {
+                            let tooltip = "";
+                            let rottype = 0;
+                            let altform = false;
+                            if (spawn.spawn_data != null && spawn.spawn_data.length > 2) {
+                                let spawndata = spawn.spawn_data.substring(1, spawn.spawn_data.length - 1).split("|").map(x => x.trim()).filter(x => isNaN(x));
+
+                                if (spawndata.indexOf("Night") > -1) {
+                                    tooltip += "🌙";
+                                    spawndata.splice(spawndata.indexOf("Night"), 1);
+                                }
+                                if (spawndata.indexOf("PreCycle") > -1) {
+                                    tooltip += "🚿";
+                                    spawndata.splice(spawndata.indexOf("PreCycle"), 1);
+                                }
+                                if (spawndata.indexOf("Winter") > -1) {
+                                    tooltip += "❄️";
+                                    spawndata.splice(spawndata.indexOf("Winter"), 1);
+                                }
+                                if (spawndata.findIndex(x => x.startsWith("RotType")) > -1) {
+                                    let rotflag = spawndata.find(x => x.startsWith("RotType"));
+                                    switch (rotflag) {
+                                        case "RotType:1":
+                                        case "RotType:2":
+                                            rottype = 1;
+                                            break;
+                                        case "RotType:3":
+                                            rottype = 2;
+                                            break;
+                                    }
+                                    // spawndata.splice(spawndata.findIndex(x => x.startsWith("RotType")), 1);
+                                }
+                                if (spawndata.findIndex(x => x.startsWith("NamedAttr")) > -1) {
+                                    spawndata.splice(spawndata.findIndex(x => x.startsWith("NamedAttr")), 1);
+                                }
+                                if (spawndata.indexOf("AlternateForm") > -1) {
+                                    altform = true;
+                                    spawndata.splice(spawndata.indexOf("AlternateForm"), 1);
+                                }
+                                if (tooltip.length > 0) tooltip += ", ";
+                                tooltip += spawndata.join(", ");
+                            }
+                            let icon = spawn.creature.toLowerCase();
+                            if (altform && icon == "skywhale") icon = "altskywhale";
+                            if (rottype > 0) icon = icon + "_" + rottype;
+                            let path = "./resources/icons/" + icon + ".png";
+                            divhtml += `<div class="spawn-entry${spawn_filter}">
+                                <img class="icon-image" src="${path}"/>
+                                <div class="icon-label">x${spawn.amount}</div>
+                                <div class="icon-tooltip">${tooltip}</div>
+                                </div>`;
+                        }
+                    }
+                    return L.marker(latlng, {
+                        icon: L.divIcon({
+                            className: 'spawn-divs',
+                            html: divhtml,
+                        }),
+                        interactive: false,
+                    });
+                },
+            });
+            if (hadSpawns) densLayer.addTo(map);
+            overlays.addOverlay(densLayer, "Spawns");
+
+            let hadCreatureDens = map.hasLayer(creatureDenLayer) || loadedRegion == null;
+            if (creatureDenLayer != null) {
+                overlays.removeLayer(creatureDenLayer);
+                map.removeLayer(creatureDenLayer);
+            }
+            creatureDenLayer = L.geoJSON(regionJson[`${pdifficulty}-${region}`]["room_nodes"], {
+                pointToLayer: function (feature, latlng) {
+                    return L.marker(latlng, {
+                        icon: L.divIcon({
+                            className: "creature-den-divs",
+                            html: nodeToSpawn(feature, pdifficulty) != null && nodeToSpawn(feature, pdifficulty).properties.spawns.length > 0 ? `<div class="creature-den-entry" style="width: 62px;height: 62px;outline: 1px dashed red;margin: auto"></div>` : '<img class="object-image" src="./resources/none.png" style="width: 62px;height: 62px;outline: 1px dashed red;margin: auto"/>',
+                            iconSize: [62, 62],
+                        })
+                    });
+                },
+                onEachFeature: function (feature, layer) {
+                    layer.on({
+                        click: openModal,
+                    });
+                }
+            });
+            if (hadCreatureDens) creatureDenLayer.addTo(map);
+            overlays.addOverlay(creatureDenLayer, "Creature Dens");
+        }
+
+        var tileLayer;
+        var roomsLayer;
+        var roomNames;
+        var lastRoomFocused;
+        var connectionsLayer;
+        var geometryLayer;
+        var densLayer;
+        var placedObjectsLayer;
+        var placedObjectsMarkerLayer;
+        var roomTagsLayer;
+        var warpPointsLayer;
+        var warpDestsLayer;
+        var rippleEggsLayer;
+        var vistaPointsLayer;
+        var creatureDenLayer;
+        var loadedDifficulty = null;
+        var loadedRegion = null;
+        var rottedRegions = ["wora", "wsur", "whir", "wgwr", "wdsr"];
+        function loadRegion(pdifficulty, pregion) {
+            if (loadedDifficulty == pdifficulty && loadedRegion == pregion) {
+                // Region isn't changing, double-check focused room
+                let foundRoom = false;
+                if (room != null && roomsLayer != null) {
+                    for (let l of roomsLayer.getLayers()) {
+                        if (l.feature.properties.name == room) {
+                            //map.fitBounds(l.getBounds());
+                            focusRoom(l);
+                            foundRoom = true;
+                            break;
+                        }
+                    }
+                }
+                if (!foundRoom) {
+                    console.log("newState err");
+                    resetFocus();
+                    map.setView([0, 0], -5);
+                }
+                return;
+            }
+            region = pregion; // chaos
+            console.log("Loading: region {" + region + "} on slugcat {" + pdifficulty + "}");
+            try {
+                if (regions[region]["slugcats"].indexOf(pdifficulty) == -1) {
+                    console.warn(pdifficulty + " does not exist for region! Picking first available slugcat for region.");
+                    if (regions[region]["slugcats"].length > 0) {
+                        pdifficulty = regions[region]["slugcats"][0];
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+            }
+            var region_url = region.toUpperCase();
+            var roompath = `./slugcats/${region_url}/${pdifficulty}`;
+            getJsonObject(`${roompath}/region.json`, function (json) {
+                if (!regionJson[`${pdifficulty}-${region}`])
+                {
+                    regionJson[`${pdifficulty}-${region}`] = JSON.parse(JSON.stringify(json));
+                    originalRegionJson[`${pdifficulty}-${region}`] = JSON.parse(JSON.stringify(json));
+                }
+
+                if (!regionJson[`${pdifficulty}-${region}`]["placed_objects"]) {
+                    regionJson[`${pdifficulty}-${region}`]["placed_objects"] = [];
+                }
+
+                var roomjson = json;
+                if ('copyingrooms' in json) {
+                    getJsonObject(`${roompath}/${region_url}/region.json`, function (copyjson) {
+                        roomjson = copyjson;
+                        roompath = `${roompath}/${region_url}`;
+                    }, false);
+                }
+
+                // Background color
+                map.getContainer().style.backgroundColor = 'rgb(' + json["bgcolor"].join(',') + ')'; // I hate this with passion, but such is the way of the CSS
+
+                // Tileset layer
+                if (tileLayer != null) map.removeLayer(tileLayer);
+                tileLayer = L.tileLayer(mapAssetUrl(`${roompath}/{z}/{x}_{y}.png`), {
+                    attribution: "<a href=\"https://store.steampowered.com/app/312520/Rain_World/\">Rain World</a> by <a href=\"https://twitter.com/VideocultMedia\">Videocult</a>",
+                    minZoom: -7,
+                    maxZoom: 3,
+                    maxNativeZoom: 0, // important, stop requesting tiles at this point
+                });
+                tileLayer.addTo(map);
+
+                // Room features and name popups
+                let hadNames = map.hasLayer(roomNames) || loadedRegion == null;
+                if (roomNames != null) {
+                    overlays.removeLayer(roomNames);
+                    map.removeLayer(roomNames);
+                }
+                let hadRooms = map.hasLayer(roomsLayer) || loadedRegion == null;
+                if (roomsLayer != null) {
+                    overlays.removeLayer(roomsLayer);
+                    map.removeLayer(roomsLayer);
+                }
+                roomNames = L.layerGroup();
+                roomsLayer = L.geoJSON(roomjson["room_features"], {
+                    style: {
+                        weight: 0,
+                        color: 'rgb(' + json["highlightcolor"].join(',') + ')',
+                        fillOpacity: 0
+                    },
+                    onEachFeature: function (feature, layer) {
+                        // Room focus stuff
+                        layer.on({
+                            mouseover: hilightRoom,
+                            mouseout: resetHilight,
+                            contextmenu: showPlacedObjectMenu,
+                            tooltipopen: function (e) {
+                                e.tooltip.setLatLng(L.latLng([].concat(e.target.feature.properties.popupcoords).reverse()));
+                                e.tooltip.getElement().style.removeProperty('opacity'); // 'defaults' amirite
+                            },
+                        });
+
+                        L.tooltip({ direction: "center", offset: [0, -14], permanent: true, className: "rw-text room-labels" }, layer).setContent(feature.properties.name).setLatLng(L.latLng([].concat(feature.properties.popupcoords).reverse())).addTo(roomNames);
+
+                        layer.bindTooltip(feature.properties.name, { direction: "center", offset: [0, -14], interactive: true, className: "rw-text room-labels hover-label" });
+                    }
+                });
+                if (hadRooms) roomsLayer.addTo(map);
+                overlays.addOverlay(roomsLayer, "Rooms");
+                if (hadNames) roomNames.addTo(map);
+                overlays.addOverlay(roomNames, "Room Names");
+
+                // Connections
+                let hadConnections = map.hasLayer(connectionsLayer) || loadedRegion == null;
+                if (connectionsLayer != null) {
+                    overlays.removeLayer(connectionsLayer);
+                    map.removeLayer(connectionsLayer);
+                }
+                connectionsLayer = new L.BezierGeoJSON(roomjson["connection_features"], {
+                    color: 'rgba(' + json["shortcutcolor"].join(',') + ',0.72)', // so the white looks better
+                    weight: 2,
+                    lineCap: "butt", // hehe
+                    dashArray: "5 8",
+                    interactive: false,
+                });
+                if (hadConnections) connectionsLayer.addTo(map);
+                overlays.addOverlay(connectionsLayer, "Connections");
+
+                // Geometry
+                let hadGeometry = map.hasLayer(geometryLayer) || loadedRegion == null;
+                if (geometryLayer != null) {
+                    overlays.removeLayer(geometryLayer);
+                    map.removeLayer(geometryLayer);
+                }
+                geometryLayer = L.geoJSON(roomjson["geo_features"], {
+                    interactive: false,
+                    color: 'rgb(' + json["geocolor"].join(',') + ')',
+                    weight: 2,
+                    lineCap: "butt", // im easily entertained
+                    lineJoin: "miter",
+                });
+                if (hadGeometry) geometryLayer.addTo(map);
+                overlays.addOverlay(geometryLayer, "Geometry");
+
+                // Spawns
+                drawSpawns(pdifficulty);
+
+                // Placed Objects
+                drawPlacedObjects(pdifficulty);
+
+                // Placed Objects
+                let hadPlacedObjects = map.hasLayer(placedObjectsLayer) || loadedRegion == null;
+                if (placedObjectsLayer != null) {
+                    overlays.removeLayer(placedObjectsLayer);
+                    map.removeLayer(placedObjectsLayer);
+                }
+                placedObjectsLayer = L.geoJSON(json["placedobject_features"], {
+                    pointToLayer: function (feature, latlng) {
+                        let objecthtml = "";
+                        let object = feature.properties.object;
+                        let data = feature.properties.settings;
+
+                        // Parse thingy
+                        let rules = poRules[object];
+                        rules ??= poRules[object.toLowerCase()];
+                        if (rules != undefined && "use" in rules) {
+                            object = rules["use"];
+							rules = poRules[object];
+							rules ??= poRules[object.toLowerCase()];
+                        }
+
+                        // Data!
+                        let icon = "./resources/icons/" + object.toLowerCase() + ".png";
+                        let tooltip = "";
+                        let display = true;
+
+                        if (rules != undefined) {
+                            if ("icon" in rules) {
+                                let val = parseRule(rules["icon"], new Map([["default", icon], ["slugcat", pdifficulty], ["settings", data]]));
+                                if (typeof val != "string") {
+                                    throw new SyntaxError("Expected string for icon!");
+                                }
+                                icon = val;
+                            }
+                            if ("displayif" in rules) {
+                                let val = parseRule(rules["displayif"], new Map([["default", display], ["slugcat", pdifficulty], ["settings", data]]));
+                                if (typeof val != "boolean") {
+                                    throw new SyntaxError("Expected boolean for display!");
+                                }
+                                display = val;
+                            }
+                            if ("text" in rules) {
+                                let strs = [];
+                                for (const rule of rules["text"]) {
+                                    strs.push(parseRule(rule, new Map([["slugcat", pdifficulty], ["settings", data]])));
+                                }
+                                for (let i = 0; i < strs.length; i++) {
+                                    strs[i] = strs[i].replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;').replaceAll("\n", "<br/>");
+                                }
+                                tooltip = strs.join("<br/>");
+                            }
+                        }
+
+                        // The resulting HTML
+                        if (display) {
+                            objecthtml += `<div class="object-entry">
+                                        <img class="object-image" src="${icon}"/>
+                                        <div class="object-tooltip">${tooltip}</div>
+                                        </div>`;
+                        }
+
+                        return L.marker(latlng, {
+                            icon: L.divIcon({
+                                className: 'object-divs',
+                                html: objecthtml,
+                            }),
+                            interactive: false,
+                        });
+                    },
+                });
+                if (hadPlacedObjects) placedObjectsLayer.addTo(map);
+                overlays.addOverlay(placedObjectsLayer, "Placed Objects");
+
+                // Warp points
+                let hadWarpPoints = map.hasLayer(warpPointsLayer) || loadedRegion == null;
+                if (warpPointsLayer) {
+                    overlays.removeLayer(warpPointsLayer);
+                    map.removeLayer(warpPointsLayer);
+                }
+                warpPointsLayer = L.geoJSON(json["warppoint_features"], {
+                    pointToLayer: function (feature, latlng) {
+                        let taghtml = "";
+                        let warpData = feature.properties;
+
+                        let icon = "wrsa";
+                        if (region.toLowerCase() == "wora") icon = "unknown";
+                        else if (rottedRegions.indexOf(region.toLowerCase()) > -1) icon = "wora";
+                        else if (region.toLowerCase() == "wara") icon = "waua";
+                        if (warpData.destRegion != null) icon = warpData.destRegion.toLowerCase();
+
+                        let regionName = regions[icon.toUpperCase()];
+                        if (regionName != undefined) regionName = regionName["name"];
+                        else regionName = "Random warp";
+
+                        if (region.toLowerCase() != "waua") {
+                            taghtml += "<div class=\"warppoint-filter\">";
+                            taghtml += `<img class="warppoint-image" src="./resources/warp/${icon}.png" title="${regionName}"/>`;
+                            taghtml += "</div>";
+                        }
+
+                        return L.marker(latlng, {
+                            icon: L.divIcon({
+                                className: 'warppoint-divs',
+                                html: taghtml,
+                            }),
+                            interactive: true,
+                        });
+                    },
+                    onEachFeature: function (feature, layer) {
+                        // Region changing stuff
+                        let warpData = feature.properties;
+                        layer.on({
+                            click: function (e) {
+                                if (warpData.destRegion != null) {
+                                    region = warpData.destRegion.toUpperCase();
+                                    room = warpData.destRoom?.toUpperCase();
+                                    pushState();
+                                } else if (region.toLowerCase() == "wara") {
+                                    region = "WAUA";
+                                    room = null;
+                                    pushState();
+                                } else if (rottedRegions.indexOf(region.toLowerCase()) > -1) {
+                                    region = "WORA";
+                                    room = null;
+                                    pushState();
+                                } else {
+                                    region = "WRSA";
+                                    room = null;
+                                    pushState();
+                                }
+                            }
+                        });
+                    }
+                });
+                if (hadWarpPoints) warpPointsLayer.addTo(map);
+                overlays.addOverlay(warpPointsLayer, "Warp Points");
+
+                // Warp destinations
+                let hadWarpDestinations = map.hasLayer(warpDestsLayer) || loadedRegion == null;
+                if (warpDestsLayer) {
+                    overlays.removeLayer(warpDestsLayer);
+                    map.removeLayer(warpDestsLayer);
+                }
+                warpDestsLayer = L.geoJSON(json["warpdest_features"], {
+                    pointToLayer: function (feature, latlng) {
+                        let taghtml = "";
+                        let data = feature.properties;
+                        let title = "Warp Destination";
+                        let classes = "warpdest-circle";
+
+                        let badWarp = data.badWarp;
+                        let deadEnd = data.deadEnd;
+
+                        if (badWarp) {
+                            title += "\nBad warp";
+                            classes += " badwarp";
+                        }
+                        if (deadEnd) {
+                            title += "\nDead end";
+                        }
+                        if (data.rippleReq > 1) {
+                            title += `\nRipple requirement: ${data.rippleReq}`;
+                        }
+
+                        taghtml += "<div class=\"warpdest-filter\">";
+                        taghtml += `<div class="${classes}" title="${title}"></div>`;
+                        // taghtml += `<img class="warpdest-image" src="./resources/icons/.png"/>`;
+                        if (data.rippleReq > 1) taghtml += `<div class="warpdest-label">\u2265${data.rippleReq}</div>`;
+                        taghtml += "</div>";
+
+                        return L.marker(latlng, {
+                            icon: L.divIcon({
+                                className: 'warpdest-divs',
+                                html: taghtml,
+                            }),
+                        });
+                    }
+                });
+                if (hadWarpDestinations) warpDestsLayer.addTo(map);
+                overlays.addOverlay(warpDestsLayer, "Warp Destinations");
+
+                // Ripple spawn eggs
+                let hadRippleEggs = map.hasLayer(rippleEggsLayer) || loadedRegion == null;
+                if (rippleEggsLayer != null) {
+                    overlays.removeLayer(rippleEggsLayer);
+                    map.removeLayer(rippleEggsLayer);
+                }
+                rippleEggsLayer = L.geoJSON(json["ripplespawnegg_features"], {
+                    pointToLayer: function (feature, latlng) {
+                        let objecthtml = "";
+                        let object = feature.properties.object;
+                        let data = feature.properties.settings;
+
+                        // Data!
+                        let icon = `./resources/icons/${object.toLowerCase()}.png`;
+
+                        // The resulting HTML
+                        objecthtml += `<div class="rse-entry">
+                                    <img class="rse-image" src="${icon}"/>
+                                    </div>`;
+
+                        return L.marker(latlng, {
+                            icon: L.divIcon({
+                                className: 'rse-divs',
+                                html: objecthtml,
+                            }),
+                            interactive: false,
+                        });
+                    }
+                });
+                if (hadRippleEggs) rippleEggsLayer.addTo(map);
+                overlays.addOverlay(rippleEggsLayer, "Ripple Objects");
+
+                // Vista points
+                let hadVistaPoints = map.hasLayer(vistaPointsLayer) || loadedRegion == null;
+                if (vistaPointsLayer != null) {
+                    overlays.removeLayer(vistaPointsLayer);
+                    map.removeLayer(vistaPointsLayer);
+                }
+                vistaPointsLayer = L.geoJSON(json["vista_features"], {
+                    pointToLayer: function (feature, latlng) {
+                        return L.marker(latlng, {
+                            icon: L.divIcon({
+                                className: "vista-divs",
+                                html: `<div class="vista-entry"><img class="object-image" src="./resources/Vista_icon.png"/></div>`
+                            }),
+                            interactive: false
+                        });
+                    }
+                });
+                if (hadVistaPoints) vistaPointsLayer.addTo(map);
+                overlays.addOverlay(vistaPointsLayer, "Vistas");
+
+                // Room Tags
+                let hadRoomTags = map.hasLayer(roomTagsLayer) || loadedRegion == null;
+                if (roomTagsLayer != null) {
+                    overlays.removeLayer(roomTagsLayer);
+                    map.removeLayer(roomTagsLayer);
+                }
+                roomTagsLayer = L.geoJSON(json["roomtag_features"], {
+                    pointToLayer: function (feature, latlng) {
+                        let taghtml = "";
+                        let roomtag = feature.properties;
+                        let icons = [];
+                        let tooltips = [];
+
+                        for (const tag of roomtag.tags) {
+                            if (tag == "SHELTER") {
+                                tooltips.push("Shelter");
+                                icons.push("Shelter_icon");
+                            } else if (tag == "ANCIENTSHELTER") {
+                                tooltips.push("Ancient Shelter");
+                                icons.push("AncientShelter_icon");
+                            } else if (tag == "GATE") {
+                                tooltips.push("Gate");
+                                icons.push("Gate_icon");
+                            } else if (tag == "SWARMROOM") {
+                                tooltips.push("Swarm Room");
+                                icons.push("SwarmRoom_icon");
+                            } else if (tag == "PERF_HEAVY") {
+                                tooltips.push("Performance Heavy");
+                            } else if (tag == "SCAVOUTPOST") {
+                                tooltips.push("Scavenger Toll");
+                                icons.push("ScavOutpost_icon");
+                            } else if (tag == "SCAVTRADER") {
+                                tooltips.push("Scavenger Merchant");
+                                icons.push("ScavTrader_icon");
+                            } else if (tag == "NOTRACKERS") {
+                                tooltips.push("No Trackers");
+                            } else if (tag == "ARENA") {
+                                tooltips.push("Arena");
+                            } else {
+                                tooltips.push(tag);
+                                icons.push("unknown-white");
+                            }
+                        }
+
+                        // Put together the HTML
+                        taghtml += "<div class=\"roomtag-entry roomtag-filter\">";
+                        for (const icon of icons) {
+                            taghtml += `<img class="roomtag-image" src="./resources/${icon}.png"/>`;
+                        }
+                        for (const tooltip of tooltips) {
+                            taghtml += `<div class="roomtag-label">${tooltip}</div>`;
+                        }
+                        taghtml += "</div>";
+
+                        return L.marker(latlng, {
+                            icon: L.divIcon({
+                                className: 'roomtag-divs',
+                                html: taghtml,
+                            }),
+                            interactive: false,
+                        });
+                    },
+                });
+                if (hadRoomTags) roomTagsLayer.addTo(map);
+                overlays.addOverlay(roomTagsLayer, "Room Tags");
+
+                // Zoom to room on rooms loaded
+                let foundRoom = false;
+                if (room != null && roomsLayer != null) {
+                    for (let l of roomsLayer.getLayers()) {
+                        if (l.feature.properties.name == room) {
+                            //map.fitBounds(l.getBounds());
+                            focusRoom(l);
+                            foundRoom = true;
+                            break;
+                        }
+                    }
+                }
+                if (!foundRoom) {
+                    if (room != null) {
+                        room = null;
+                        pushState();
+                    }
+                    console.log(`regionLoad err coming from ${loadedDifficulty} to ${pdifficulty}, layers len = ${roomsLayer.getLayers().length}`);
+                    resetFocus();
+                    map.setView([0, 0], -5);
+                }
+
+                loadedDifficulty = pdifficulty;
+                loadedRegion = pregion;
+
+                // Don't enable certain layers when loaded for the first time
+                if (loadedCount == 1) {
+                    map.removeLayer(roomTagsLayer);
+                    map.removeLayer(rippleEggsLayer);
+                    setCollapsibleWidths();
+
+                    // Also check the radio button
+                    const regionButtons = [... document.querySelectorAll("input[name='regions']")];
+                    for (const btn of regionButtons) {
+                        btn.checked = (btn.value == region);
+                    }
+                }
+                loadedCount++;
+            }, true);
+
+            if (Object.keys(regions).indexOf(region) != -1) {
+                for (let i = 0; i < slugcats.length; i++) {
+                    document.getElementById("scug-" + slugcats[i]).classList.toggle("hidden", regions[region]["slugcats"].indexOf(slugcats[i].toLowerCase()) == -1);
+                }
+            }
+        }
+
+        // My weird lisp parsing system for the placed object data
+        /**
+         * Rule parser thingy. Secretly has very loose parsing, not that it's intended, just that I was too lazy to fill in some of it.
+         * @param {string} rule A rule parenthesis or string
+         * @param {Map<string, string>} values The values for some instructions
+         * @returns {*} Whatever the result of the rule is
+         */
+        function parseRule(rule, values) {
+            if (typeof rule != "string") {
+                throw new SyntaxError("Error parsing rule! Not of type string");
+            }
+
+            rule = rule.trim();
+            if (rule.length == 0) return "";
+            if (rule[0] == "(" && rule[rule.length - 1] == ")") {
+                // Parenthesis
+                rule = rule.substring(1, rule.length - 1);
+                let keyword = rule.indexOf(" ") != -1 ? rule.substring(0, rule.indexOf(" ")) : rule;
+                let args = [];
+
+                // Split the thingy
+                let inWhitespace = true;
+                let tempValue = "";
+                let stack = [];
+                for (let i = keyword.length + 1; i < rule.length; i++) {
+                    if (stack.length > 0) {
+                        switch (stack[0]) {
+                            case "'": {
+                                if (rule[i] == "'") {
+                                    stack.shift();
+                                    tempValue += rule[i];
+                                } else if (rule[i] == "\\") {
+                                    // Skip the next value in processing but add both to tempValue
+                                    tempValue += rule[i] + rule[i + 1];
+                                    i++;
+                                } else {
+                                    tempValue += rule[i];
+                                }
+                                break;
+                            }
+                            case "(": {
+                                if (rule[i] == "(") {
+                                    stack.unshift("(");
+                                } else if (rule[i] == "'") {
+                                    stack.unshift("'");
+                                } else if (rule[i] == ")") {
+                                    stack.shift();
+                                }
+                                tempValue += rule[i];
+                                break;
+                            }
+                            default: {
+                                throw new TypeError("Unknown string in stack! (" + stack[0] + ")");
+                            }
+                        }
+                    } else {
+                        if (rule[i] == " ") {
+                            if (!inWhitespace) {
+                                inWhitespace = true;
+                                args.push(tempValue);
+                            }
+                        } else {
+                            if (inWhitespace) {
+                                inWhitespace = false;
+                                tempValue = "";
+                            }
+
+                            if (rule[i] == "(") {
+                                stack.unshift("(");
+                            } else if (rule[i] == "'") {
+                                stack.unshift("'");
+                            }
+                            tempValue += rule[i];
+                        }
+                    }
+                }
+                args.push(tempValue);
+                if (stack.length > 0) {
+                    throw new SyntaxError("Mismatched parenthesis!");
+                }
+
+                // Parse the arguments (this will also weed out any syntax errors)
+                args = args.map(x => parseRule(x, values));
+
+                // Okay ! yippee now we can do code stuff
+                switch (keyword) {
+                    case "": {
+                        return "";
+                    }
+                    case "default": {
+                        if (!values.has("default")) {
+                            throw new SyntaxError("The use of 'default' is not allowed here!");
+                        }
+                        return values.get("default");
+                    }
+                    case "slugcat": {
+                        if (!values.has("slugcat")) {
+                            throw new SyntaxError("The use of 'slugcat' is not allowed here!");
+                        }
+                        return values.get("slugcat");
+                    }
+                    case "setting": {
+                        if (!values.has("settings")) {
+                            throw new SyntaxError("The use of 'settings' is not allowed here!");
+                        }
+                        let settings = values.get("settings");
+                        if (args.length < 1) {
+                            throw new SyntaxError("(settings num) requires at least 1 argument!");
+                        }
+                        let num = parseInt(args[0]);
+                        if (isNaN(num)) {
+                            throw new SyntaxError("(settings num) expects an integer as first argument!");
+                        } else if (num < 0 || num > settings.length) {
+                            throw new RangeError("(settings num) expects a number [0, length of settings)! (this is range syntax for you uncultured people)")
+                        }
+                        return settings[num];
+                    }
+                    case "true": return true;
+                    case "false": return false;
+                    case "array": return args; // this can return empty array. that's intended.
+                    case "string": {
+                        if (args.length == 1) return args[0].toString();
+                        else throw new SyntaxError("(string arg) expects exactly one argument!");
+                    }
+                    case "number": {
+                        if (args.length == 1) return Number(args[0]);
+                        else throw new SyntaxError("(number arg) expects exactly one argument!");
+                    }
+                    case "+": {
+                        if (args.length < 2) {
+                            throw new SyntaxError("(+ args...) requires at least two arguments!");
+                        } else if (args.some(x => typeof x != "number")) {
+                            throw new SyntaxError("(+ args...) expects all its arguments to be numbers! Argument " + (args.findIndex(x => typeof x != "number") + 1) + " was not.");
+                        }
+                        return args.reduce((prev, curr) => prev + curr);
+                    }
+                    case "-": {
+                        if (args.length < 2) {
+                            throw new SyntaxError("(- args...) requires at least two arguments!");
+                        } else if (args.some(x => typeof x != "number")) {
+                            throw new SyntaxError("(- args...) expects all its arguments to be numbers! Argument " + (args.findIndex(x => typeof x != "number") + 1) + " was not.");
+                        }
+                        return args.reduce((prev, curr) => prev - curr);
+                    }
+                    case "*": {
+                        if (args.length < 2) {
+                            throw new SyntaxError("(* args...) requires at least two arguments!");
+                        } else if (args.some(x => typeof x != "number")) {
+                            throw new SyntaxError("(* args...) expects all its arguments to be numbers! Argument " + (args.findIndex(x => typeof x != "number") + 1) + " was not.");
+                        }
+                        return args.reduce((prev, curr) => prev * curr);
+                    }
+                    case "/": {
+                        if (args.length < 2) {
+                            throw new SyntaxError("(/ args...) requires at least two arguments!");
+                        } else if (args.some(x => typeof x != "number")) {
+                            throw new SyntaxError("(/ args...) expects all its arguments to be numbers! Argument " + (args.findIndex(x => typeof x != "number") + 1) + " was not.");
+                        }
+                        return args.reduce((prev, curr) => prev / curr);
+                    }
+                    case "%": {
+                        if (args.length < 2) {
+                            throw new SyntaxError("(% args...) requires at least two arguments!");
+                        } else if (args.some(x => typeof x != "number")) {
+                            throw new SyntaxError("(% args...) expects all its arguments to be numbers! Argument " + (args.findIndex(x => typeof x != "number") + 1) + " was not.");
+                        }
+                        return args.reduce((prev, curr) => prev % curr);
+                    }
+                    case "**": {
+                        if (args.length < 2) {
+                            throw new SyntaxError("(** args...) requires at least two arguments!");
+                        } else if (args.some(x => typeof x != "number")) {
+                            throw new SyntaxError("(** args...) expects all its arguments to be numbers! Argument " + (args.findIndex(x => typeof x != "number") + 1) + " was not.");
+                        }
+                        return args.reduce((prev, curr) => prev ** curr);
+                    }
+                    case "&": {
+                        if (args.length < 2) {
+                            throw new SyntaxError("(& args...) requires at least two arguments!");
+                        } else if (args.some(x => typeof x != "number")) {
+                            throw new SyntaxError("(& args...) expects all its arguments to be numbers! Argument " + (args.findIndex(x => typeof x != "number") + 1) + " was not.");
+                        }
+                        return args.reduce((prev, curr) => prev & curr);
+                    }
+                    case "|": {
+                        if (args.length < 2) {
+                            throw new SyntaxError("(| args...) requires at least two arguments!");
+                        } else if (args.some(x => typeof x != "number")) {
+                            throw new SyntaxError("(| args...) expects all its arguments to be numbers! Argument " + (args.findIndex(x => typeof x != "number") + 1) + " was not.");
+                        }
+                        return args.reduce((prev, curr) => prev | curr);
+                    }
+                    case "^": {
+                        if (args.length < 2) {
+                            throw new SyntaxError("(^ args...) requires at least two arguments!");
+                        } else if (args.some(x => typeof x != "number")) {
+                            throw new SyntaxError("(^ args...) expects all its arguments to be numbers! Argument " + (args.findIndex(x => typeof x != "number") + 1) + " was not.");
+                        }
+                        return args.reduce((prev, curr) => prev ^ curr);
+                    }
+                    case "~": {
+                        if (args.length < 1) {
+                            throw new SyntaxError("(~ arg) expects at least one argument!");
+                        } else if (typeof args[0] != "number") {
+                            throw new SyntaxError("(~ arg) expects a number as first argument!");
+                        }
+                        return ~args[0];
+                    }
+                    case ">": {
+                        if (args.length < 2) {
+                            throw new SyntaxError("(> args...) requires at least two arguments!");
+                        } else if (args.some(x => typeof x != "number")) {
+                            throw new SyntaxError("(> args...) expects all its arguments to be numbers! Argument " + (args.findIndex(x => typeof x != "number") + 1) + " was not.");
+                        }
+                        return args.reduce((prev, curr) => prev > curr);
+                    }
+                    case "<": {
+                        if (args.length < 2) {
+                            throw new SyntaxError("(< args...) requires at least two arguments!");
+                        } else if (args.some(x => typeof x != "number")) {
+                            throw new SyntaxError("(< args...) expects all its arguments to be numbers! Argument " + (args.findIndex(x => typeof x != "number") + 1) + " was not.");
+                        }
+                        return args.reduce((prev, curr) => prev < curr);
+                    }
+                    case ">=": {
+                        if (args.length < 2) {
+                            throw new SyntaxError("(>= args...) requires at least two arguments!");
+                        } else if (args.some(x => typeof x != "number")) {
+                            throw new SyntaxError("(>= args...) expects all its arguments to be numbers! Argument " + (args.findIndex(x => typeof x != "number") + 1) + " was not.");
+                        }
+                        return args.reduce((prev, curr) => prev >= curr);
+                    }
+                    case "<=": {
+                        if (args.length < 2) {
+                            throw new SyntaxError("(<= args...) requires at least two arguments!");
+                        } else if (args.some(x => typeof x != "number")) {
+                            throw new SyntaxError("(<= args...) expects all its arguments to be numbers! Argument " + (args.findIndex(x => typeof x != "number") + 1) + " was not.");
+                        }
+                        return args.reduce((prev, curr) => prev <= curr);
+                    }
+                    case "==": {
+                        if (args.length < 2) {
+                            throw new SyntaxError("(== args...) requires at least two arguments!");
+                        }
+                        return args.reduce((prev, curr) => prev == curr);
+                    }
+                    case "!=": {
+                        if (args.length < 2) {
+                            throw new SyntaxError("(!= args...) requires at least two arguments!");
+                        }
+                        return args.reduce((prev, curr) => prev != curr);
+                    }
+                    case "&&":
+                    case "and": {
+                        if (args.some(x => typeof x != "boolean")) {
+                            throw new SyntaxError("(and args...) expects all its arguments to be booleans! Argument " + (args.findIndex(x => typeof x != "boolean") + 1) + " was not.");
+                        }
+                        return args.reduce((prev, curr) => prev && curr);
+                    }
+                    case "||":
+                    case "or": {
+                        if (args.some(x => typeof x != "boolean")) {
+                            throw new SyntaxError("(or args...) expects all its arguments to be booleans! Argument " + (args.findIndex(x => typeof x != "boolean") + 1) + " was not.");
+                        }
+                        return args.reduce((prev, curr) => prev || curr);
+                    }
+                    case "!":
+                    case "not": {
+                        if (args.length < 1) {
+                            throw new SyntaxError("(not arg) expects at least one argument!");
+                        } else if (typeof args[0] != "boolean") {
+                            throw new SyntaxError("(not arg) expects a boolean as first argument!");
+                        }
+                        return !args[0];
+                    }
+                    case "if": {
+                        if (typeof args[0] != "boolean") {
+                            throw new SyntaxError("(if condition valueIfTrue valueIfFalse?) expects a boolean as first argument!");
+                        } else if (args.length < 2) {
+                            throw new SyntaxError("(if condition valueIfTrue valueIfFalse?) requires at least 2 arguments!")
+                        } else {
+                            return args[0] ? args[1] : (args[2] ?? "");
+                        }
+                    }
+                    case "round": {
+                        if (args.length < 1) {
+                            throw new SyntaxError("(round arg) expects at least one argument!");
+                        } else if (typeof args[0] != "number") {
+                            throw new SyntaxError("(round arg) expects a number as first argument!");
+                        }
+                        return Math.round(args[0]);
+                    }
+                    case "floor": {
+                        if (args.length < 1) {
+                            throw new SyntaxError("(floor arg) expects at least one argument!");
+                        } else if (typeof args[0] != "number") {
+                            throw new SyntaxError("(floor arg) expects a number as first argument!");
+                        }
+                        return Math.floor(args[0]);
+                    }
+                    case "ceil": {
+                        if (args.length < 1) {
+                            throw new SyntaxError("(ceil arg) expects at least one argument!");
+                        } else if (typeof args[0] != "number") {
+                            throw new SyntaxError("(ceil arg) expects a number as first argument!");
+                        }
+                        return Math.ceil(args[0]);
+                    }
+                    case "trunc": {
+                        if (args.length < 1) {
+                            throw new SyntaxError("(trunc arg) expects at least one argument!");
+                        } else if (typeof args[0] != "number") {
+                            throw new SyntaxError("(trunc arg) expects a number as first argument!");
+                        }
+                        return Math.trunc(args[0]);
+                    }
+                    case "sqrt": {
+                        if (args.length < 1) {
+                            throw new SyntaxError("(sqrt arg) expects at least one argument!");
+                        } else if (typeof args[0] != "number") {
+                            throw new SyntaxError("(sqrt arg) expects a number as first argument!");
+                        }
+                        return Math.sqrt(args[0]);
+                    }
+                    case "lower": {
+                        if (args.length < 1) {
+                            throw new SyntaxError("(lower arg) expects at least one argument!");
+                        } else if (typeof args[0] != "string") {
+                            throw new SyntaxError("(lower arg) expects a string as first argument!");
+                        }
+                        return args[0].toLowerCase();
+                    }
+                    case "upper": {
+                        if (args.length < 1) {
+                            throw new SyntaxError("(upper arg) expects at least one argument!");
+                        } else if (typeof args[0] != "string") {
+                            throw new SyntaxError("(upper arg) expects a string as first argument!");
+                        }
+                        return args[0].toUpperCase();
+                    }
+                    case "split": {
+                        if (args.length < 2) {
+                            throw new SyntaxError("(split string delimiter) requires at least two arguments!");
+                        } else if (args.some(x => typeof x != "string")) {
+                            throw new SyntaxError("(split string delimiter) expects all its arguments to be strings! Argument " + (args.findIndex(x => typeof x != "string") + 1) + " was not.");
+                        }
+                        return args[0].split(args[1]);
+                    }
+                    case "join": {
+                        if (args.some(x => typeof x != "string")) {
+                            throw new SyntaxError("(join args...) expects all its arguments to be strings! Argument " + (args.findIndex(x => typeof x != "string") + 1) + " was not.");
+                        }
+                        return args.join("");
+                    }
+                    case "joinwith": {
+                        if (args.some(x => typeof x != "string")) {
+                            throw new SyntaxError("(joinwith separator args...) expects all its arguments to be strings! Argument " + (args.findIndex(x => typeof x != "string") + 1) + " was not.");
+                        }
+                        return args.slice(1).join(args[0]);
+                    }
+                    case "contains": {
+                        if (args.length < 2) {
+                            throw new SyntaxError("(contains container item) requires at least two arguments!");
+                        } else if (typeof args[1] != "string") {
+                            throw new SyntaxError("(contains container item) expects a string as second argument!");
+                        } else if (typeof args[0] == "string" || args[0] instanceof Array) {
+                            return args[0].indexOf(args[1]) > -1;
+                        } else {
+                            throw new SyntaxError("(contains container item) expects a string or array as first argument!");
+                        }
+                    }
+                    case "index": {
+                        if (args.length < 2) {
+                            throw new SyntaxError("(index container item) requires at least two arguments!");
+                        } else if (typeof args[1] != "string") {
+                            throw new SyntaxError("(index container item) expects a string as second argument!");
+                        } else if (typeof args[0] == "string" || args[0] instanceof Array) {
+                            return args[0].indexOf(args[1]);
+                        } else {
+                            throw new SyntaxError("(index container item) expects a string or array as first argument!");
+                        }
+                    }
+                    default: {
+                        return parseRule(rule, values); // maybe it's unnecessary parenthesis?
+                    }
+                }
+            }
+            else if (rule[0] == "'" && rule[rule.length - 1] == "'") {
+                // String
+                rule = rule.substring(1, rule.length - 1);
+                let str = "";
+                for (let i = 0; i < rule.length; i++) {
+                    if (rule[i] == "'") {
+                        throw new SyntaxError("Error parsing string: too many ' characters");
+                    } else if (rule[i] == "\\") {
+                        if (i == rule.length - 1) {
+                            throw new SyntaxError("Expected character after escape in string!");
+                        } else {
+                            switch (rule[i + 1]) {
+                                case "\\":
+                                case "'":
+                                    str += rule[i + 1];
+                                    break;
+                                case "n":
+                                    str += "\n";
+                                    break;
+                                default:
+                                    console.warn("Unknown escape sequence: \\" + rule[i + 1]);
+                                    break;
+                            }
+                        }
+                    } else {
+                        str += rule[i];
+                    }
+                }
+                return str;
+            }
+            else if (/^(?:\d+\.?|\d*\.\d+)$/m.test(rule) && !isNaN(Number(rule))) {
+                return Number(rule);
+            }
+            else {
+                throw new SyntaxError("Error parsing rule {" + rule + "}: either did not begin with (, ', or number or end with the corresponding matching character!");
+            }
+        }
+
+        function initializePlacedObjectMenu() {
+            const menu = document.getElementById('placedObjectMenu');
+            menu.innerHTML = '';
+
+            const genericItem = document.createElement('button');
+            genericItem.type = 'button';
+            genericItem.className = 'placed-object-menu-add';
+            genericItem.textContent = '+ Add generic placed object';
+            genericItem.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                menu.classList.remove('open');
+                openPlacedObjectModal({ room: selectedRoom, position: selectedPosition || [0, 0], absoluteCoordinates: selectedCoords });
+            });
+            menu.appendChild(genericItem);
+
+            for (const objectType of PLACED_OBJECT_TYPES) {
+                const item = document.createElement('div');
+                item.className = 'placed-object-menu-item';
+                item.innerHTML = `
+                    <img src="./resources/icons/${objectTypeToImage(objectType)}.png" />
+                    ${objectTypeToDisplayName(objectType)}
+                `;
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    placeSelectedObject(objectType);
+                });
+                menu.appendChild(item);
+            }
+        }
+
+        // Collapseable things
+        var uncollapsed = null;
+        var collapsible = document.querySelectorAll(".collapsible");
+        for (const el of collapsible) {
+            var button = el.querySelector(".collapse-tab");
+            button.addEventListener("click", (e) => {
+                if (uncollapsed != null) {
+                    uncollapsed.classList.add("collapsed");
+                }
+                if (uncollapsed == el) {
+                    uncollapsed = null;
+                } else {
+                    uncollapsed = el;
+                    el.classList.remove("collapsed");
+                }
+            });
+        }
+        function setCollapsibleWidths() {
+            for (const el of collapsible) {
+                el.style.setProperty("--hide-pos", "-" + (el.getBoundingClientRect().width) + "px");
+            }
+        }
+
+    </script>
+</body>
+
+</html>

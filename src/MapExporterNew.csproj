@@ -39,4 +39,7 @@
 		<Delete Files="@(RemovePlugins)" />
 	</Target>
 
+	<PropertyGroup>
+		<PostBuildEvent>copy /Y "C:\Users\parke\Downloads\VSCode\MapExporter\assets\newest\plugins\MapExporterNew.dll" "C:\Program Files (x86)\Steam\steamapps\common\Rain World\RainWorld_Data\StreamingAssets\mods\mapexporter\newest\plugins\MapExporterNew.dll"</PostBuildEvent>
+	</PropertyGroup>
 </Project>

@@ -7,7 +7,8 @@ var MAP_CONFIG = {
 
 function mapAssetUrl(path) {
     if (!MAP_CONFIG.tileBaseUrl) return path;
-    return MAP_CONFIG.tileBaseUrl + '/' + path.replace(/^\.\//, '');
+    var cleanPath = path.replace(/^\.\//, '').toLowerCase();
+    return MAP_CONFIG.tileBaseUrl + '/' + cleanPath.replace(/\//g, '%2F');
 }
 
 function getJsonObject(url, cb, async = true) {

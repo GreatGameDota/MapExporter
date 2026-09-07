@@ -1,0 +1,36 @@
+var requestLock = {};
+var lastRequest = null;
+
+var MAP_CONFIG = {
+    tileBaseUrl: "https://firebasestorage.googleapis.com/v0/b/spawn-placer.firebasestorage.app/o"
+};
+
+function mapAssetUrl(path) {
+    if (!MAP_CONFIG.tileBaseUrl) return path;
+    var cleanPath = path.replace(/^\.\//, '').toLowerCase();
+    return MAP_CONFIG.tileBaseUrl + '/' + cleanPath.replace(/\//g, '%2F');
+}
+
+function getJsonObject(url, cb, async = true) {
+    if (lastRequest != null) lastRequest.abort();
+    let request = new XMLHttpRequest();
+    lastRequest = request;
+    requestLock = {};
+    request.requestLock = requestLock;
+    request.open('GET', url, async);
+    request.onreadystatechange = function () {
+        if (request.requestLock != requestLock && request.status != 0) {
+            request.abort();
+            console.log("request for " + url + " aborted!");
+        }
+        else if (request.readyState === 4 && request.status === 200) {
+            try {
+                cb(JSON.parse(request.responseText));
+            } catch (err) {
+                console.log(err);
+            }
+            if (lastRequest == request) lastRequest = null;
+        }
+    }
+    request.send();
+}

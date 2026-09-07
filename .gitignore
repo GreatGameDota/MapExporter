@@ -434,3 +434,5 @@ assets/map-frontend/resources/warp/*
 !assets/map-frontend/resources/slugcat/watcher.png
 
 !assets/map-frontend/resources/warp/unknown.png
+
+site/slugcats/**/*
