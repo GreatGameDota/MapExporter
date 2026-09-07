@@ -702,11 +702,12 @@
         objectMap[PLACED_OBJECT_TYPES[39]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[39])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
 
         class PlacedObjectData {
-            constructor(objectType, position, room) {
+            constructor(objectType, position, room, info = '') {
                 this.type = 'Feature';
                 this.objectType = objectType;
                 this.position = position;
                 this.room = room;
+                this.info = info;
                 this.id = room + '_' + new Date().toISOString();
             }
 
@@ -717,6 +718,7 @@
                         object: this.objectType,
                         id: this.id,
                         room: this.room,
+                        info: this.info,
                         position: this.position
                     },
                     geometry: {
@@ -742,8 +744,9 @@
         function fromRoomSettingsLine(line, room) {
             let parts = line.split('><');
             if (parts.length < 3) return null;
-            const [objectType, xStr, yStr] = parts;
-            return new PlacedObjectData(objectType.toLowerCase(), [parseFloat(xStr), parseFloat(yStr)], room);
+            const [objectType, xStr, yStr, rawInfo] = parts;
+            const info = rawInfo.split(", Filter")[0].trim();
+            return new PlacedObjectData(objectType.toLowerCase(), [parseFloat(xStr), parseFloat(yStr)], room, info);
         }
 
         // Dynamic navigation
@@ -2155,7 +2158,7 @@
 
                 // Tileset layer
                 if (tileLayer != null) map.removeLayer(tileLayer);
-                tileLayer = L.tileLayer(`${roompath}/{z}/{x}_{y}.png`, {
+                tileLayer = L.tileLayer(mapAssetUrl(`${roompath}/{z}/{x}_{y}.png`), {
                     attribution: "<a href=\"https://store.steampowered.com/app/312520/Rain_World/\">Rain World</a> by <a href=\"https://twitter.com/VideocultMedia\">Videocult</a>",
                     minZoom: -7,
                     maxZoom: 3,

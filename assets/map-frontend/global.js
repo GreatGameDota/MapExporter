@@ -1,6 +1,15 @@
 var requestLock = {};
 var lastRequest = null;
 
+var MAP_CONFIG = {
+    tileBaseUrl: ""
+};
+
+function mapAssetUrl(path) {
+    if (!MAP_CONFIG.tileBaseUrl) return path;
+    return MAP_CONFIG.tileBaseUrl + '/' + path.replace(/^\.\//, '');
+}
+
 function getJsonObject(url, cb, async = true) {
     if (lastRequest != null) lastRequest.abort();
     let request = new XMLHttpRequest();
