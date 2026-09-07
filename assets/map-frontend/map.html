@@ -427,8 +427,14 @@
             padding: 20px 24px;
             min-width: 280px;
             max-width: 90vw;
+            max-height: 90vh;
             box-shadow: 0 10px 30px rgba(0,0,0,0.25);
             position: relative;
+            background-color: #0c0c0c;
+            color: #cccccc;
+            overflow-y: auto;
+            border: 2px solid #A9A4B2;
+            border-radius: 8px;
         }
         .modal-box h2 {
             margin: 0 0 10px;
@@ -445,12 +451,12 @@
             border: none;
             line-height: 1;
         }
-        .modal-close:hover { color: #222; }
+        .modal-close:hover { color: #444; }
 
         .placed-object-menu {
             position: fixed;
             display: none;
-            background: #000;
+            background: #0c0c0c;
             z-index: 1000;
             max-height: 25vh;
             overflow-y: auto;
@@ -503,15 +509,42 @@
         .delete-object-btn:hover {
             background-color: rgba(255, 100, 100, 1);
         }
+
+        .input-field {
+            background-color: #0c0c0c;
+            color: #cccccc;
+            border-radius: 8px;
+            border: 2px solid #A9A4B2;
+        }
+
+        .lineage-row {
+            margin-bottom: 4px;
+        }
+
+        .lineage-box {
+            margin-top: 8px;
+            padding: 4px;
+            border-radius: 8px;
+            border: 2px solid #a9a4b270;
+        }
+
+        .spawn-card {
+            margin-bottom: 8px;
+            padding: 4px;
+            border-radius: 8px;
+            border: 2px solid #a9a4b270;
+        }
     </style>
 </head>
 
 <body>
     <div id="mapid"></div>
 
-    <button id="exportBtn" style="position: absolute;bottom: 24px;left: 500px;z-index: 1000;">Export</button>
-    <button id="uploadBtn" style="position: absolute;bottom: 24px;left: 600px;z-index: 1000;">Import .txt</button>
-    <input type="file" id="fileInput" accept=".txt" multiple style="display:none" />
+    <div style="position: absolute;bottom: 50px;left: 50px;z-index: 1000;">
+        <button class="rw-text rw-ui" id="exportBtn" style="margin-bottom: 10px;color: #cccccc;background-color:#0c0c0c">EXPORT</button>
+        <button class="rw-text rw-ui" id="uploadBtn" style="color: #cccccc;background-color:#0c0c0c">IMPORT .txt</button>
+        <input type="file" id="fileInput" accept=".txt" multiple style="display:none" />
+    </div>
 
     <div class="modal-overlay rw-text" id="modalOverlay">
         <div class="modal-box">
@@ -519,11 +552,11 @@
             <h2 id="modalTitle"></h2>
 
             <div id="spawnCards"></div>
-            <button id="addSpawnBtn">+ Add spawn</button>
+            <button class="rw-ui rw-text" id="addSpawnBtn" style="color: #cccccc;background-color:#0c0c0c;margin-top: 10px;">+ Add spawn</button>
 
-            <div>
-                <button id="cancelBtn">Cancel</button>
-                <button id="saveBtn">Save</button>
+            <div style="display: flex; justify-content: space-between; margin-top: 16px;">
+                <button class="rw-ui rw-text" id="saveBtn" style="color: #cccccc;background-color:#0c0c0c;margin-right: 10px;">Save</button>
+                <button class="rw-ui rw-text" id="cancelBtn" style="color: #cccccc;background-color:#0c0c0c">Cancel</button>
             </div>
         </div>
     </div>
@@ -1215,31 +1248,37 @@
             const lineageData = spawn.lineage_data || [];
 
             card.innerHTML = `
-                <div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                     <strong>Spawn</strong>
-                    <button type="button" class="remove-spawn" title="Remove spawn">&times;</button>
+                    <button type="button" class="remove-spawn rw-ui" title="Remove spawn" style="color: #cccccc;background-color:#0c0c0c;width:fit-content;padding:4px 8px;margin-left:auto;">&times;</button>
                 </div>
                 <div>
-                    <div>
+                    <div style="display:flex;flex-direction:row;margin-bottom:8px;padding:0 4px;gap:8px;">
                         <label>Creature</label>
-                        <input type="text" class="f-creature" value="${spawn.creature ?? ''}" placeholder="Snail" />
+                        <input type="text" class="f-creature rw-text input-field" value="${spawn.creature ?? ''}" placeholder="Snail" />
                     </div>
-                    <div>
+                    <div style="display:flex;flex-direction:row;margin-bottom:8px;padding:0 4px;gap:8px;">
                         <label>Amount</label>
-                        <input type="number" class="f-amount" value="${spawn.amount ?? 1}" min="0" />
+                        <input type="number" class="f-amount rw-text input-field" value="${spawn.amount ?? 1}" min="0" />
                     </div>
-                    <div>
+                    <div style="display:flex;flex-direction:row;margin-bottom:8px;padding:0 4px;gap:8px;">
                         <label>Spawn data</label>
-                        <input type="text" class="f-spawn-data" value="${spawn.spawn_data ?? ''}" placeholder="{PreCycle|Seed:123}" />
+                        <input type="text" class="f-spawn-data rw-text input-field" value="${spawn.spawn_data ?? ''}" placeholder="{PreCycle|Seed:123}" />
                     </div>
-                    <label>
+                    <label style="display:flex;flex-direction:row;margin-bottom:8px;padding:0 4px;gap:8px;">
                         <input type="checkbox" class="f-is-lineage" ${isLineage ? 'checked' : ''} />
                         Is lineage
                     </label>
                 </div>
                 <div class="lineage-box" style="display: ${isLineage ? 'block' : 'none'}">
+                    <div class="rw-text" style="display:flex;flex-direction:row;margin-bottom:8px;padding:0 4px;gap:8px;font-weight:bold;justify-content:space-between;">
+                        <span>Creature</span>
+                        <span>Probability (0 - 1)</span>
+                        <span>Data</span>
+                        <span></span>
+                    </div>
                     <div class="lineage-rows"></div>
-                    <button type="button" class="add-lineage-row">+ Add lineage step</button>
+                    <button type="button" class="add-lineage-row rw-ui" style="color: #cccccc;background-color:#0c0c0c;width:fit-content;margin:auto;padding:4px 8px;">+ Add lineage step</button>
                 </div>
             `;
 
@@ -1251,10 +1290,10 @@
                 const row = document.createElement('div');
                 row.className = 'lineage-row';
                 row.innerHTML = `
-                    <input type="text" class="l-creature" value="${creature}" placeholder="creature" />
-                    <input type="text" class="l-prob" value="${prob}" placeholder="0.0000" />
-                    <input type="text" class="l-data" value="${dataVal ?? ''}" placeholder="null" />
-                    <button type="button" class="remove-lineage-row" title="Remove">&times;</button>
+                    <input type="text" class="l-creature rw-text input-field" value="${creature}" placeholder="creature" />
+                    <input type="text" class="l-prob rw-text input-field" value="${prob}" placeholder="0.0000" />
+                    <input type="text" class="l-data rw-text input-field" value="${dataVal ?? ''}" placeholder="{PreCycle|Seed:123}" />
+                    <button type="button" class="remove-lineage-row rw-ui" title="Remove" style="color: #cccccc;background-color:#0c0c0c;width:fit-content;margin:auto;padding:4px 8px;">&times;</button>
                 `;
                 row.querySelector('.remove-lineage-row').addEventListener('click', () => row.remove());
                 lineageRows.appendChild(row);

@@ -30,7 +30,6 @@ namespace MapExporterNew.Hooks
 
         private static void RockAndSpearSeeding(On.Room.orig_LoadFromDataString orig, Room self, string[] lines)
         {
-            int roomIndex = self.abstractRoom.index - self.abstractRoom.world.firstRoomIndex;
             UnityEngine.Random.State state = UnityEngine.Random.state;
             orig(self, lines);
             UnityEngine.Random.state = state;
@@ -167,7 +166,7 @@ namespace MapExporterNew.Hooks
             }
 
             // Seed for rocks and spears so we don't get random changes in git diffs
-            int roomIndex = self.abstractRoom.index - self.abstractRoom.world.firstRoomIndex;
+            int roomIndex = self.abstractRoom.index;
             UnityEngine.Random.State state = UnityEngine.Random.state;
             UnityEngine.Random.InitState(roomIndex);
             orig(self);
