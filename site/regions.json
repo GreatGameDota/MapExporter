@@ -1,1 +1,119 @@
-{"CC":{"slugcats":["gourmand"],"name":"Chimney Canopy","specificNames":["Chimney Canopy"]},"SU":{"slugcats":["gourmand"],"name":"Outskirts","specificNames":["Outskirts"]},"DS":{"slugcats":["gourmand"],"name":"Drainage System","specificNames":["Drainage System"]},"HI":{"slugcats":["gourmand"],"name":"Industrial Complex","specificNames":["Industrial Complex"]},"SB":{"slugcats":["gourmand"],"name":"Subterranean","specificNames":["Subterranean"]},"GW":{"slugcats":["gourmand"],"name":"Garbage Wastes","specificNames":["Garbage Wastes"]},"SI":{"slugcats":["gourmand"],"name":"Sky Islands","specificNames":["Sky Islands"]},"SL":{"slugcats":["gourmand"],"name":"Shoreline","specificNames":["Shoreline"]},"LF":{"slugcats":["gourmand"],"name":"Farm Arrays","specificNames":["Farm Arrays"]}}
+{
+    "SU": {
+        "slugcats": [
+            "gourmand"
+        ],
+        "name": "Outskirts",
+        "specificNames": [
+            "Outskirts"
+        ]
+    },
+    "HI": {
+        "slugcats": [
+            "gourmand"
+        ],
+        "name": "Industrial Complex",
+        "specificNames": [
+            "Industrial Complex"
+        ]
+    },
+    "DS": {
+        "slugcats": [
+            "gourmand"
+        ],
+        "name": "Drainage System",
+        "specificNames": [
+            "Drainage System"
+        ]
+    },
+    "GW": {
+        "slugcats": [
+            "gourmand"
+        ],
+        "name": "Garbage Wastes",
+        "specificNames": [
+            "Garbage Wastes"
+        ]
+    },
+    "SL": {
+        "slugcats": [
+            "gourmand"
+        ],
+        "name": "Shoreline",
+        "specificNames": [
+            "Shoreline"
+        ]
+    },
+    "VS": {
+        "slugcats": [
+            "gourmand"
+        ],
+        "name": "Pipeyard",
+        "specificNames": [
+            "Pipeyard"
+        ]
+    },
+    "SH": {
+        "slugcats": [
+            "gourmand"
+        ],
+        "name": "Shaded Citadel",
+        "specificNames": [
+            "Shaded Citadel"
+        ]
+    },
+    "CC": {
+        "slugcats": [
+            "gourmand"
+        ],
+        "name": "Chimney Canopy",
+        "specificNames": [
+            "Chimney Canopy"
+        ]
+    },
+    "SI": {
+        "slugcats": [
+            "gourmand"
+        ],
+        "name": "Sky Islands",
+        "specificNames": [
+            "Sky Islands"
+        ]
+    },
+    "LF": {
+        "slugcats": [
+            "gourmand"
+        ],
+        "name": "Farm Arrays",
+        "specificNames": [
+            "Farm Arrays"
+        ]
+    },
+    "SB": {
+        "slugcats": [
+            "gourmand"
+        ],
+        "name": "Subterranean",
+        "specificNames": [
+            "Subterranean"
+        ]
+    },
+    "MS": {
+        "slugcats": [
+            "gourmand"
+        ],
+        "name": "Submerged Superstructure",
+        "specificNames": [
+            "Submerged Superstructure"
+        ]
+    },
+    "OE": {
+        "slugcats": [
+            "gourmand"
+        ],
+        "name": "Outer Expanse",
+        "specificNames": [
+            "Outer Expanse"
+        ]
+    }
+}
