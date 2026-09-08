@@ -859,7 +859,7 @@
         getJsonObject("placedobjectsdata.json", function (json) { poRules = json; }, false);
 
         var html = "";
-        var regionListSorted = Object.keys(regions).sort((a, b) => regions[a]["name"].toUpperCase().localeCompare(regions[b]["name"].toUpperCase()));
+        var regionListSorted = Object.keys(regions);
         for (const r of regionListSorted) {
             html += `
 <label>
