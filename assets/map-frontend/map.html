@@ -2035,6 +2035,7 @@
                             }
                             let icon = spawn.creature.toLowerCase();
                             if (altform && icon == "skywhale") icon = "altskywhale";
+                            if (altform && icon == "smallcentipede") icon = "altsmallcentipede";
                             if (rottype > 0) icon = icon + "_" + rottype;
                             let path = "./resources/icons/" + icon + ".png";
                             divhtml += `<div class="spawn-entry${spawn_filter}">
