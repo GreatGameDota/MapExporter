@@ -1747,7 +1747,7 @@
                             const spawn = {
                                 is_lineage: true,
                                 amount: 1,
-                                creature: individualSpawns[0].split("-")[0] === "NONE" ? "" : spawnParts[0],
+                                creature: individualSpawns[0].split("-")[0] === "NONE" ? "" : individualSpawns[0].split("-")[0],
                                 spawn_data: spawnData === null ? null : spawnData
                             };
 
