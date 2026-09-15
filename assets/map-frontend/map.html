@@ -1726,7 +1726,7 @@
                     const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0 && l !== "[MERGE]" && l !== "[ENDMERGE]" && l !== "CREATURES" && l !== "END CREATURES" && !l.includes("REPLACE") && !l.includes("FIND") && !l.includes("ADD"));
                     for (const line of lines)
                     {
-                        var [_, diff, rest] = line.match(/^\(([^)]+)\)(.*)$/);
+                        var [_, diff, rest] = line.match(/^\(([^)]+)\)(.*)$/) ?? ["", "", ""];
                         if (diff.toLowerCase() !== loadedDifficulty.toLowerCase())
                             continue;
                         var parts = rest.split(" : ");
