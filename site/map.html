@@ -1892,10 +1892,11 @@
                     {
                         regionJson[`${loadedDifficulty}-${region}`]["placed_objects"] = regionJson[`${loadedDifficulty}-${region}`]["placed_objects"].filter(obj => obj.properties.room.toLowerCase() !== room.toLowerCase());
 
-                        const lines = text.split("\n").filter(l => l.length > 0 && l !== "[MERGE]" && l !== "[ENDMERGE]" && l !== "CREATURES" && l !== "END CREATURES" && !l.includes("REPLACE") && !l.includes("FIND") && !l.includes("ADD"));
+                        const lines = text.split("\n").filter(l => l.length > 0 && l !== "[MERGE]" && l !== "[ENDMERGE]" && l !== "CREATURES" && l !== "END CREATURES" && !l.includes("FIND") && !l.includes("ADD"));
 
-                        for (const line of lines)
+                        for (var line of lines)
                         {
+                            line = line.replace("[REPLACE]", "");
                             if (line.startsWith("PlacedObjects: "))
                             {
                                 const settingsStr = line.replace("PlacedObjects: ", "").trim();
