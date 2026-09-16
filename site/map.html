@@ -1856,6 +1856,8 @@
                                     }
                                 };
                                 var node = spawnToNode(newSpawnFeature, loadedDifficulty);
+                                if (node == null)
+                                    continue;
                                 newSpawnFeature["geometry"] = {
                                     type: "Point",
                                     coordinates: [node.geometry.coordinates[0], node.geometry.coordinates[1]]
@@ -1909,6 +1911,8 @@
                                     {
                                         objData.id = objData.id + "_" + i++; // Timestamp not unique since objects mass added at once
                                         const devPos = regionJson[`${loadedDifficulty}-${region}`]["room_devPos"].find(node => node.properties.room.toLowerCase() === room.toLowerCase());
+                                        if (devPos == null)
+                                            continue;
                                         var x = objData.position[0];
                                         var y = objData.position[1];
 
