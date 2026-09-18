@@ -115,5 +115,14 @@
         "specificNames": [
             "Outer Expanse"
         ]
+    },
+    "LC": {
+        "slugcats": [
+            "gourmand"
+        ],
+        "name": "Metropolis",
+        "specificNames": [
+            "Metropolis"
+        ]
     }
 }
