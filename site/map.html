@@ -1723,7 +1723,7 @@
                 if (world.toLowerCase() == region.toLowerCase())
                 {
                     regionJson[`${loadedDifficulty}-${region}`]["spawn_features"] = [];
-                    const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0 && l !== "[MERGE]" && l !== "[ENDMERGE]" && l !== "CREATURES" && l !== "END CREATURES" && !l.includes("REPLACE") && !l.includes("FIND") && !l.includes("ADD"));
+                    const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0 && l !== "[MERGE]" && l !== "[ENDMERGE]" && l !== "CREATURES" && l !== "END CREATURES" && !l.includes("REPLACE") && !l.includes("FIND") && !l.includes("ADD") && !l.includes("CONDITIONAL") && !l.includes("ROOMS"));
                     for (const line of lines)
                     {
                         var [_, diff, rest] = line.match(/^\(([^)]+)\)(.*)$/) ?? ["", "", ""];
@@ -1803,7 +1803,7 @@
                                 currSpawnFeature.properties.spawns.push(spawn);
                             }
                         }
-                        else
+                        else if (parts.length === 2)
                         {
                             var room = parts[0];
                             if (room === "OFFSCREEN")
