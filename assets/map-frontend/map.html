@@ -1727,8 +1727,8 @@
                     for (const line of lines)
                     {
                         var [_, diff, rest] = line.match(/^\(([^)]+)\)(.*)$/) ?? ["", "", ""];
-                        if (diff.toLowerCase() !== loadedDifficulty.toLowerCase())
-                            continue;
+                        // if (diff.toLowerCase() !== loadedDifficulty.toLowerCase())
+                        //     continue;
                         var parts = rest.split(" : ");
                         if (parts.length === 4)
                         {
