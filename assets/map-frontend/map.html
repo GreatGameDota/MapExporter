@@ -1662,7 +1662,8 @@
                 
                 var roomSettingsMap = {};
                 var regionSettingsFolder = worldFolder.folder(region.toLowerCase() + "-rooms");
-                var filterList = ["White", "Yellow", "Red", "Rivulet", "Artificer", "Saint", "Spear", "Gourmand", "Watcher", "vanillaWatcher"].filter(c => c !== loadedDifficulty.charAt(0).toUpperCase() + loadedDifficulty.slice(1));
+                // var filterList = ["White", "Yellow", "Red", "Rivulet", "Artificer", "Saint", "Spear", "Gourmand", "Watcher", "vanillaWatcher"].filter(c => c !== loadedDifficulty.charAt(0).toUpperCase() + loadedDifficulty.slice(1));
+                var filterList = ["White", "Yellow", "Red", "Rivulet", "Artificer", "Saint", "Spear", "Gourmand", "Watcher"];
 
                 for (var placedObj of regionJson[`${loadedDifficulty}-${region}`]["placed_objects"]) {
                     const objData = new PlacedObjectData(placedObj.properties.object, placedObj.properties.position, placedObj.properties.room);
