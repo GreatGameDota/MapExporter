@@ -1535,7 +1535,8 @@
                     }
                     spawnStr += `${room} : ${den}`;
                     lines.push(spawnStr);
-                    lines.push(`[ADDBEFORE](X-${loadedDifficulty.charAt(0).toUpperCase() + loadedDifficulty.slice(1)})`);
+                    // lines.push(`[ADDBEFORE](X-${loadedDifficulty.charAt(0).toUpperCase() + loadedDifficulty.slice(1)})`);
+                    lines.push(`[ADDBEFORE](X-vanillaWatcher)`);
                 }
             }
 
@@ -1553,7 +1554,8 @@
                     var creature = spawn.creature;
                     const amount = spawn.amount;
                     const spawnData = spawn.spawn_data ?? '';
-                    var spawnStr = `(${loadedDifficulty.charAt(0).toUpperCase() + loadedDifficulty.slice(1)})`;
+                    // var spawnStr = `(${loadedDifficulty.charAt(0).toUpperCase() + loadedDifficulty.slice(1)})`;
+                    var spawnStr = `(vanillaWatcher)`;
                     if (spawn.is_lineage) {
                         spawnStr += "LINEAGE : ";
                         spawnStr += `${room} : ${den} : `;
@@ -1608,7 +1610,8 @@
                     var creature = spawn.creature;
                     const amount = spawn.amount;
                     const spawnData = spawn.spawn_data ?? '';
-                    var spawnStr = `(${loadedDifficulty.charAt(0).toUpperCase() + loadedDifficulty.slice(1)})`;
+                    // var spawnStr = `(${loadedDifficulty.charAt(0).toUpperCase() + loadedDifficulty.slice(1)})`;
+                    var spawnStr = `(vanillaWatcher)`;
                     if (spawn.is_lineage) {
                         spawnStr += "LINEAGE : ";
                         spawnStr += `${room} : ${den} : `;
