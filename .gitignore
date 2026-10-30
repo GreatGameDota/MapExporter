@@ -419,6 +419,7 @@ assets/map-frontend/resources/warp/*
 !assets/map-frontend/resources/icons/goldtoken.png
 !assets/map-frontend/resources/icons/greentoken.png
 !assets/map-frontend/resources/icons/redtoken.png
+!assets/map-frontend/resources/icons/dynamicwarptarget.png
 
 !assets/map-frontend/resources/slugcat/default.png
 !assets/map-frontend/resources/slugcat/white.png

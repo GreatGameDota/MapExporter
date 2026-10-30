@@ -616,7 +616,7 @@
             'hazer', 'deadhazer', 'rattler', 'bigjellyfish', 'stowaway', 'placedboxworm',
             'placedfiresprite', 'placeddrillcrab', 'placedrats', 'placedfrog', 'placedloach',
             'placedrotloach', 'placedbarnacles', 'lantern', 'graffitibomb', 'gooieduck', 'lillypuck',
-            'glowweed', 'dandelionpeach', 'rottendanglefruit', 'rottenseedcob'
+            'glowweed', 'dandelionpeach', 'rottendanglefruit', 'rottenseedcob', 'dynamicwarptarget'
         ];
 
         const objectMap = {};
@@ -700,6 +700,8 @@
         objectMap[PLACED_OBJECT_TYPES[38]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[38])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
         // rottenseedcob
         objectMap[PLACED_OBJECT_TYPES[39]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[39])}><${position[0]}><${position[1]}><0~0~2~3, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
+        // dynamicwarptarget
+        objectMap[PLACED_OBJECT_TYPES[40]] = (filteredList, position) => `${objectTypeToDisplayName(PLACED_OBJECT_TYPES[0])}><${position[0]}><${position[1]}><0~0~0~false~false, Filter><${position[0]}><${position[1]}><10~0~2~3~${filteredList.join('|')}, `;
 
         class PlacedObjectData {
             constructor(objectType, position, room, info = '') {
@@ -1152,7 +1154,8 @@
                 "glowweed": "GlowWeed",
                 "dandelionpeach": "DandelionPeach",
                 "rottendanglefruit": "RottenDangleFruit",
-                "rottenseedcob": "RottenSeedCob"
+                "rottenseedcob": "RottenSeedCob",
+                "dynamicwarptarget": "DynamicWarpTarget"
             };
 
             return displayNames[objectType] ?? objectType;
