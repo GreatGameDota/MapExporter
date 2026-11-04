@@ -124,5 +124,14 @@
         "specificNames": [
             "Metropolis"
         ]
+    },
+    "VSS": {
+        "slugcats": [
+            "gourmand"
+        ],
+        "name": "Unfortunate Evolution",
+        "specificNames": [
+            "Unfortunate Evolution"
+        ]
     }
 }
