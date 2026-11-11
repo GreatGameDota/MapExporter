@@ -133,5 +133,14 @@
         "specificNames": [
             "Unfortunate Evolution"
         ]
+    },
+    "VSW": {
+        "slugcats": [
+            "gourmand"
+        ],
+        "name": "Kneeling Exterior",
+        "specificNames": [
+            "Kneeling Exterior"
+        ]
     }
 }
