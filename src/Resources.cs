@@ -490,13 +490,13 @@ namespace MapExporterNew
             if (obj.deactivattable && !obj.active) return false;
             return
                 (obj.data is PlacedObject.ConsumableObjectData
-                    && obj.data is not PlacedObject.VoidSpawnEggData
                     && (!ModManager.MSC || obj.type != MoreSlugcatsEnums.PlacedObjectType.Germinator)
                     && (obj.type != PlacedObject.Type.SandGrubNetwork))
                 || obj.data is CollectToken.CollectTokenData
                 || obj.data is WarpPoint.WarpPointData
                 || obj.data is DynamicWarpTargetData
                 || obj.data is PlacedObject.RippleSpawnEggData // not VoidSpawnEggData surprisingly
+                || obj.data is PlacedObject.VoidSpawnEggData
                 || obj.data is SpinningTopData
                 || obj.type == WatcherEnums.PlacedObjectType.WeaverSpot
                 || obj.type == PlacedObject.Type.SandGrubHole
